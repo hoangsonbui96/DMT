@@ -1,0 +1,24 @@
+[09-Nov-2022 04:08:33 UTC] PHP Fatal error:  Uncaught Error: Class 'App\Http\Controllers\Admin\AdminController' not found in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php:19
+Stack trace:
+#0 {main}
+  thrown in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 19
+[09-Nov-2022 04:08:39 UTC] PHP Fatal error:  Uncaught Error: Class 'App\Http\Controllers\Admin\AdminController' not found in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php:19
+Stack trace:
+#0 {main}
+  thrown in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 19
+[09-Nov-2022 04:08:52 UTC] PHP Fatal error:  Uncaught Error: Class 'App\Http\Controllers\Admin\AdminController' not found in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php:19
+Stack trace:
+#0 {main}
+  thrown in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 19
+[09-Nov-2022 04:08:54 UTC] PHP Fatal error:  Uncaught Error: Class 'App\Http\Controllers\Admin\AdminController' not found in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php:19
+Stack trace:
+#0 {main}
+  thrown in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 19
+[09-Nov-2022 04:09:27 UTC] PHP Fatal error:  Uncaught Error: Class 'App\Http\Controllers\Admin\AdminController' not found in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php:19
+Stack trace:
+#0 {main}
+  thrown in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 19
+[17-Nov-2022 03:22:09 UTC] PHP Fatal error:  Uncaught Error: Class 'App\Http\Controllers\Admin\AdminController' not found in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php:21
+Stack trace:
+#0 {main}
+  thrown in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 21
