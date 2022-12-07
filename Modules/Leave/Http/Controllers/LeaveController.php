@@ -761,7 +761,7 @@ class LeaveController extends AdminController
             }
             //TH2 : ngày SDate = ngày EDate(chỉ nghỉ trong 1 ngày)
             else{
-                //hehehe
+                
             }
         }
     }
