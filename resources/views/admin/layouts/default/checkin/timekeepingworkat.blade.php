@@ -1,0 +1,217 @@
+@extends('admin.layouts.default.app')
+@section('content')
+	<script src="https://www.gstatic.com/firebasejs/8.2.1/firebase.js"></script>
+	<script src="{{ asset('js/firebase.js') }}"></script>
+	<style>
+
+
+		.qr-box {
+			margin: 3% auto;
+		}
+
+		/*.qr-code {*/
+		/*	margin: 2% auto;*/
+		/*}*/
+
+		#clock {
+			font-family: 'Orbitron', sans-serif;
+			color: #000000;
+			font-size: 35px;
+			text-align: right;
+			padding-top: 2%;
+			padding-bottom: 1%;
+		}
+
+        .title-qr {
+            margin-top: 1.5%;
+        }
+
+        .text-title {
+            /*font-family: 'Dancing Script', cursive;*/
+            font-size: 35px;
+            color: red;
+        }
+
+        .body-qr {
+            background-color: #ffffff;
+            padding: 1%;
+        }
+
+        .qr-code {
+			margin-top: 2.5%;
+			margin-bottom: 2.5%;
+        }
+
+        .text-about {
+            padding-left: 5%;
+            padding-top: 5%;
+            padding-bottom: 5%;
+            font-size: 18px;
+        }
+
+
+		h3 {
+			font-weight: 600;
+		}
+        .button1 {
+            border-radius: 4px;
+            background-color: #f4511e;
+            border: none;
+            color: #FFFFFF;
+            text-align: center;
+            font-size: 28px;
+            padding: 20px;
+            transition: all 0.5s;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .button1 span {
+            cursor: pointer;
+            display: inline-block;
+            position: relative;
+            transition: 0.5s;
+        }
+
+        .button1 span:after {
+            content: '\00bb';
+            position: absolute;
+            opacity: 0;
+            top: 0;
+            right: -20px;
+            transition: 0.5s;
+        }
+
+        .button1:hover span {
+            padding-right: 25px;
+        }
+
+        .button1:hover span:after {
+            opacity: 1;
+            right: 0;
+        }
+
+	</style>
+
+	{{-- <meta http-equiv="refresh" content="28800"> --}}
+	<div class="qr-box">
+		<div class="logo row">
+            <div class="col-sm-1"></div>
+			<div class="col-sm-4">
+                <a href=""><img src="{{ asset("imgs/logo-akb-edit.png") }}" width="200px" height="91.27px" alt="Công ty TNHH Liên doanh ph?n m?m AKB Software" id="logo-akb" ></a>
+            </div>
+			<div id="clock" class="col-sm-6"></div>
+            <div class="col-sm-1"></div>
+		</div>
+        <div class="title-qr">
+            <p class="text-center text-title">@lang('admin.qr-code.hello') {{ Auth::user()->FullName }}</p>
+        </div>
+		<div class="body-qr" style="margin: auto;width: 50%;border: 3px solid #3c8dbc;text-align: center;">
+                <h3 class="text-center" id="textError"></h3>
+
+			<div style="margin: auto;width: 50%;padding: 10px;">
+                <!-- <h3 class="text-center">@lang('admin.qr-code.title')</h3> -->
+                <button type="button" class="button1" id="saveTimekeeping"><span>@lang('admin.qr-code.timeAt')</span></button>
+
+                @if(\Illuminate\Support\Facades\Auth::check())
+                <a class="btn" style="text-decoration:solid," href="{{ route('admin.TimekeepingNew') }}">@lang('admin.qr-code.button-back')</a>
+                @endif
+            </div>
+
+            <div>
+                <p id="token" style="display: none"></p>
+            </div>
+
+		</div>
+		<div id="popupModal">
+		</div>
+	</div>
+	<script>
+
+		var src_audio = "{{ asset('audio/translate_tts.mp3') }}";
+		var homeUrl = "{{ route('admin.home') }}";
+		var timekeepingUrl = "{{ route('admin.TimekeepingNew') }}";
+		var qrCodeUrl = "{{ route('api.qr-code') }}";
+        var getDateTime = "{{ route('api.getDateTime') }}";
+        var timekeepingUrlWorkAt = "{{ route('admin.TimekeepingNewWorkAt') }}";
+		var scheduleQRCode;
+
+        $(document).ready(function () {
+        //	firebaseCloundMessaging();
+        });
+        var timerWorkAt = {};
+        timerWorkAt['user_id'] = ('{{Auth::user()->id}}');
+        timerWorkAt['check_in_time'] = moment().format('DD/MM/YYYY - HH:mm:ss');
+        $('#saveTimekeeping').click(function () {
+            ajaxGetServerWithLoader("{{route('admin.TimekeepingNewWorkAt')}}", 'POST', timerWorkAt,function (data) {
+                if (typeof data.success !== 'undefined') {
+                     $("#textError").text(data.success);
+                    showSuccess(data.success);
+                    setTimeout(function(){
+                         $("#textError").text("");
+                    }, 5000);
+                    return ;
+                }
+
+                locationPage();
+            },function(jqXHR, textStatus, err) {
+                $("#textError").text(jqXHR.responseJSON.error);
+                showErrors(jqXHR.responseJSON.error);
+                setTimeout(function(){
+                         $("#textError").text("");
+                    }, 5000);
+                $('.loadajax').hide();
+            });
+        });
+
+
+
+        function stopScheduleQRCode() {
+		  	clearInterval(scheduleQRCode);
+		}
+
+
+        function reload(){
+            location.reload(true);
+        }
+		var mouseTimer = null, cursorVisible = true;
+
+		function disappearCursor() {
+            window.clearTimeout(mouseTimer);
+			mouseTimer = null;
+			document.body.style.cursor = "none";
+			cursorVisible = false;
+		}
+
+		document.onmousemove = function() {
+			if (mouseTimer) {
+				window.clearTimeout(mouseTimer);
+			}
+			if (!cursorVisible) {
+				document.body.style.cursor = "default";
+				cursorVisible = true;
+			}
+			mouseTimer = window.setTimeout(disappearCursor, 5000);
+		};
+        function currentTime() {
+            $.ajax({
+                type: "GET",
+                url: getDateTime,
+                data: {'device_token': ''},
+                success: function(result) {
+                    console.log(result.data)
+                    document.getElementById("clock").innerText =  moment().format('DD/MM/YYYY - HH:mm:ss');
+                },
+                error: function(error) {
+                    console.log(error)
+                }
+            });
+            var t = setTimeout(function(){ currentTime() }, 1000);
+        }
+        // currentTime();
+        var time = setInterval(function (){
+
+            document.getElementById("clock").innerText =  moment().format('DD/MM/YYYY - HH:mm:ss');
+        }, 1000);
+	</script>
+@endsection

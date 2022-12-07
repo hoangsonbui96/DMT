@@ -1,0 +1,406 @@
+<style>
+    .select-member .show-menu-arrow:not([class*=col-]):not([class*=form-control]):not(.input-group-btn) {
+        width: 100%;
+    }
+
+    .select-leader .show-menu-arrow:not([class*=col-]):not([class*=form-control]):not(.input-group-btn) {
+        width: 100%;
+    }
+
+    .tag-container {
+        display: flex;
+        flex-flow: row wrap;
+    }
+
+    .tag {
+        pointer-events: none;
+        background-color: #cdd2d4 !important;
+        color: black;
+        padding: 6px;
+        margin: 8px 5px 5px 0;
+        /*border-radius: 1rem;*/
+    }
+
+    .tag::before {
+        pointer-events: all;
+        display: inline-block;
+        content: 'x';
+        height: 20px;
+        width: 20px;
+        margin-right: 6px;
+        text-align: center;
+        color: red;
+        cursor: pointer;
+    }
+
+
+</style>
+<div class="modal draggable fade in detail-modal" id="user-info" role="dialog" data-backdrop="static">
+    <div class="modal-dialog ui-draggable">
+        <!-- Modal content-->
+        <div class="modal-content drag">
+            <div class="modal-header ui-draggable-handle" style="cursor: move;">
+                <button type="button" class="close" data-dismiss="modal" id="close-user-form">×</button>
+                <h4 class="modal-title" style=" word-break: break-word;"></h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal detail-form" id="form-add-task">
+                    <meta id="token" name="csrf-token" content="{{ csrf_token() }}">
+                    <input name="id" value="{{ isset($taskInfo) ? $taskInfo->id : null }}" type="hidden">
+                    @if(!isset($taskInfo))
+                        <ul class="nav nav-tabs ul-task" role="tablist" style="margin-bottom: 10px">
+                            <li class="active li-task">
+                                <a href="#task_1" data-toggle="tab" style="padding-bottom: 5px">Task 1</a>
+                                <span><i class="fa fa-times" aria-hidden="true"></i></span>
+                            </li>
+                            <li><a href="#" id="add-task" onclick="addNewForm(event)">
+                                    <i class="fa fa-plus" aria-hidden="true"></i></a>
+                            </li>
+                        </ul>
+                    @endif
+                    <div class="save-errors"></div>
+                    <div class="tab-content">
+                        <div id="task_1" class="tab-pane fade in active">
+                            <div class="form-group">
+                                <label class="control-label col-sm-3"
+                                       for="member">@lang('admin.task-working.project_name')
+                                    &nbsp;<sup class="text-red">*</sup>:</label>
+                                <div class="col-sm-9 ">
+                                    <div class="select-member">
+                                        <select class='selectpicker show-tick show-menu-arrow' data-live-search="true"
+                                                name="Project[]" data-size="5" data-live-search-placeholder="Search"
+                                                data-actions-box="true" @if(count($itemInfo) == 1) disabled @endif >
+                                            <option value="">@lang('admin.daily.chooseProject')</option>
+                                            @if(count($itemInfo) > 1)
+                                                {!! GenHtmlOption($itemInfo, 'id', 'NameVi') !!}
+                                            @else
+                                                <option selected
+                                                        value="{{ $itemInfo[0]->id }}">{{ $itemInfo[0]->NameVi }}</option>
+                                            @endif
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3" for="nameVi">@lang('admin.task-working.task_name')
+                                    &nbsp;<sup class="text-red">*</sup>:</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="nameVi"
+                                           placeholder="@lang('admin.task-working.placeholder_task_name')"
+                                           name="Name[]"
+                                           maxlength="100"
+                                           value="{{ isset($taskInfo) ? $taskInfo->Name : null }}">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3" for="group">@lang('admin.task-working.status')
+                                    <sup
+                                        class="text-red">*</sup>:</label>
+                                <div class="col-sm-9">
+                                    @if(!isset($taskInfo))
+                                        <select class='selectpicker show-tick show-menu-arrow' name="Status[]"
+                                                data-size="5"
+                                                data-dropup-auto="true" data-width="100%">
+                                            @if(isset($status_id))
+                                                <option value="{{ $status_id }}" selected>{{ $status_title }}</option>
+                                            @else
+                                                <option value="1">@lang('admin.task-working.status_unfinished')</option>
+                                                <option value="2">@lang('admin.task-working.status_working')</option>
+                                            @endif
+                                        </select>
+                                    @else
+                                        @if(isset($taskInfo) && $taskInfo->Status == 1)
+                                            <p style="padding-top: 7px">@lang('admin.task-working.status_unfinished')</p>
+                                            <input hidden name="Status[]" value="1">
+                                        @endif
+                                        @if(isset($taskInfo) && $taskInfo->Status == 2)
+                                            <p style="padding-top: 7px">@lang('admin.task-working.status_working')</p>
+                                            <input hidden name="Status[]" value="2">
+                                        @endif
+                                        @if(isset($taskInfo) && $taskInfo->Status == 3)
+                                            <p style="padding-top: 7px">@lang('admin.task-working.status_review')</p>
+                                            <input hidden name="Status[]" value="3">
+                                        @endif
+                                        @if(isset($taskInfo) && $taskInfo->Status == 4)
+                                            <p style="padding-top: 7px">@lang('admin.task-working.status_finished')</p>
+                                            <input hidden name="Status[]" value="4">
+                                        @endif
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3" for="sDate">@lang('admin.times')&nbsp;:</label>
+                                <div class="col-sm-9" id="select-leader">
+                                    <div class="row">
+                                        <div class="col-sm-6 col-xs-3">
+                                            <div class="input-group date">
+                                                <input type="text" class="form-control datepicker" id="sDate-input"
+                                                       placeholder="@lang('admin.startDate')" name="StartDate[]"
+                                                       value="{{ isset($taskInfo) ? FomatDateDisplay($taskInfo->StartDate, FOMAT_DISPLAY_DAY) : null }}">
+                                                <span class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar"></span>
+                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 col-xs-3">
+                                            <div class="input-group date">
+                                                <input type="text" class="form-control datepicker" id="eDate-input"
+                                                       placeholder="@lang('admin.endDate')" name="EndDate[]"
+                                                       value="{{ isset($taskInfo) ? FomatDateDisplay($taskInfo->EndDate, FOMAT_DISPLAY_DAY) : null }}">
+                                                <span class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar"></span>
+                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3" for="member">@lang('admin.project.Member')
+                                    &nbsp;:</label>
+                                <div class="col-sm-9">
+                                    <div class="select-member">
+                                        <select class='selectpicker show-tick show-menu-arrow' data-live-search="true"
+                                                name="Member[]" data-size="5" data-live-search-placeholder="Search"
+                                                data-actions-box="true">
+                                            <option value="">Chọn thành viên</option>
+{{--                                            @if(isset($taskInfo))--}}
+{{--                                                {!! GenHtmlOption($users, 'id', 'FullName', $taskInfo->Member) !!}--}}
+{{--                                            @endif--}}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3" for="desc">@lang('admin.task-working.description')
+                                    :</label>
+                                <div class="col-sm-9">
+                            <textarea class="form-control note" rows="3" id="note" maxlength="200"
+                                      name="Description[]"
+                                      placeholder="@lang('admin.task-working.placeholder_description')">{{ isset($taskInfo) ? ltrim($taskInfo->Description) : null }}</textarea>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3" for="desc">@lang('admin.note'):</label>
+                                <div class="col-sm-9">
+                            <textarea class="form-control note"
+                                      rows="2" id="note" maxlength="200" name="Note[]"
+                                      placeholder="@lang('admin.note')">{{ isset($taskInfo) ? ltrim($taskInfo->Note) : null }}</textarea>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-sm-3">@lang('admin.task-working.tags'): </label>
+                                <div class="col-sm-9">
+                                    <input class="form-control" name="hashtags" type="text" id="hashtags_1"
+                                           placeholder="@lang('admin.task-working.placeholder_tags')" autocomplete="off"
+                                           maxlength="20">
+                                    <div class="tag-container">
+                                        <p class="tag hide"></p>
+                                        @if(isset($taskInfo))
+                                            @foreach(array_slice(explode(",#", $taskInfo->Tags.'#', -1), 1) as $tag)
+                                                <p class="tag">{{ $tag }}</p>
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal"
+                        id="cancel">@lang('admin.btnCancel')</button>
+                <button type="submit" class="btn btn-primary btn-sm save-form">@lang('admin.btnSave')</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+<script type="text/javascript" async>
+    var content = $(".tab-pane").html();
+
+    SetDatePicker($('.date'), {
+        format: "dd/mm/yyyy",
+        todayHighlight: true,
+        autoclose: true,
+    });
+
+    var COUNT_TAB_WORK = 1;
+    function addNewForm(event) {
+        event.preventDefault();
+        COUNT_TAB_WORK = COUNT_TAB_WORK + 1;
+        let id = $('.nav-tabs').children().length;
+        if (id <= 5) {
+            let tabId = "task_" + id;
+            let new_tab = `
+                   <li class="li-task">
+                        <a href="#${tabId}" data-toggle="tab">Task ${COUNT_TAB_WORK}</a>
+                        <span><i class="fa fa-times" aria-hidden="true"></i></span>
+                    </li>
+                `;
+            let new_content = `
+                    <div class='tab-pane tab-work active' id="${tabId}">
+                        ${content}
+                    </div>
+                `;
+            $(event.target).closest("li").before(new_tab);
+            $(".tab-content").append(new_content)
+            $(".datepicker").datepicker({autoclose: true, todayHighlight: true});
+            $('.selectpicker').selectpicker();
+            $(".nav-tabs li:nth-child(" + id + ") a").click();
+            let input_tags = $('#task_' + COUNT_TAB_WORK).find('input[name="hashtags"]');
+            $(input_tags).attr("id", "hashtags_" + COUNT_TAB_WORK);
+            tagAction(COUNT_TAB_WORK);
+            chooseProject();
+        }
+    }
+
+    $(function () {
+        $('#toggle-one').bootstrapToggle();
+
+        $('.draggable').draggable();
+
+        $('.selectpicker').selectpicker();
+
+        $('.save-form').click(function () {
+            let data_post = $('.detail-form').serializeArray();
+            let temp = {};
+            $.each($('.tag-container .tag'), function (index, value) {
+                let parent_id = $($(value).parents()[3]).attr("id");
+                if (parent_id in temp) {
+                    temp[parent_id].push($(value).text());
+                } else {
+                    temp[parent_id] = [$(value).text()];
+                }
+            });
+            for (let key in temp) {
+                data_post.push({name: 'Tags[]', value: temp[key]});
+            }
+            data_post.push({
+                name: 'ProjectID',
+                value: $('select[name="Project\[\]"]').children("option:selected").val()
+            });
+            if ($("input[name='Status\[\]']").length !== 0) {
+                data_post.push({name: 'Status[]', value: $('input[name="Status\[\]"]').val()});
+            }
+            let taskUrl = "{{ route('admin.ApiTaskAction', isset($taskInfo) ? $taskInfo->id : null) }}";
+            let headers = {
+                'Authorization': 'Bearer {{ \Illuminate\Support\Facades\Session::get('api-user') }}',
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            };
+            ajaxGetServerWithLoaderAPI(taskUrl, headers, 'POST', data_post, function (response) {
+                {{--if (location.href === '{{ route('admin.TaskWork') }}') {--}}
+                {{--    $('.loadajax').show();--}}
+                {{--    $('#popupModal').find('.modal').modal('hide');--}}
+                {{--    let url = '{{ route('admin.TaskWorkDetail', ':id' ) }}'--}}
+                {{--    url = url.replace(':id', $('select[name="Project"]').children("option:selected").val())--}}
+                {{--    window.location.href = url--}}
+                {{--} else {--}}
+                    $('.ui-sortable').empty();
+                    $("#btn-search").click();
+                    loadProjectInfo();
+                    $('#popupModal').find('.modal').modal('hide');
+                // }
+            }, function (data) {
+                if (data.responseJSON.success === false || data.responseJSON.success === null) {
+                    showErrors(data.responseJSON.error);
+                    return;
+                }
+            });
+        });
+
+        $(".nav-tabs").on("click", "span", function () {
+            var anchor = $(this).siblings('a');
+            $(anchor.attr('href')).remove();
+            $(this).parent().remove();
+            $(".nav-tabs li").children('a').first().click();
+        });
+
+    });
+
+    function changeValueSelect(value) {
+        if (value !== "") {
+            let select_member = $('select[name="Member\[\]"]');
+            // $(select_member).empty();
+            $(select_member).selectpicker("refresh");
+            let url = "{{ route('admin.ApiMembersInProject', ':id') }}";
+            url = url.replace(':id', value)
+            $.ajax({
+                url: url,
+                method: 'GET',
+                headers: {
+                    'Content-type': 'application/json',
+                    'Authorization': 'Bearer {{ \Illuminate\Support\Facades\Session::get('api-user') }}',
+                },
+                success: res => {
+                    let data = res.data.members;
+                    // $(select_member).append(`<option value="">Chọn thành viên</option>`);
+                    $.each(data, (index, member) => {
+                        let selected = member.id == '{{ isset($taskInfo) ? $taskInfo->members()->first()->UserID : '' }}' ? 'selected' : '';
+                        $(select_member).append(`<option value="${member.id}" ${selected} >${member.FullName}</option>`);
+                    })
+                    $(select_member).selectpicker("refresh");
+                }
+            })
+        }
+    }
+
+    function tagAction(index_li) {
+        let input, hashtagArray, container, t;
+        input = document.querySelector('#hashtags_' + index_li);
+        let index_sub = index_li - 1;
+        container = $('.tag-container')[index_sub];
+        let deleteTags = document.querySelectorAll('.tag');
+        let arr_text = [];
+        $($(input).closest('.tag-container').find('.tag')).each(function () {
+            arr_text.push($(this).text());
+        });
+        input.addEventListener('keyup', () => {
+            if (event.which === 13 && input.value.length > 0) {
+                let value_underscore = input.value.trim().split(' ').join('_');
+                if (!arr_text.includes(value_underscore)) {
+                    arr_text.push(value_underscore);
+                    let text = document.createTextNode(value_underscore);
+                    let p = document.createElement('p');
+                    container.appendChild(p);
+                    p.appendChild(text);
+                    p.classList.add('tag');
+                }
+                input.value = '';
+                deleteTags = document.querySelectorAll('.tag');
+                for (let i = 0; i < deleteTags.length; i++) {
+                    deleteTags[i].addEventListener('click', () => {
+                        container.removeChild(deleteTags[i]);
+                    });
+                }
+            }
+        });
+
+        for (let i = 0; i < deleteTags.length; i++) {
+            deleteTags[i].addEventListener('click', () => {
+                container.removeChild(deleteTags[i]);
+            });
+        }
+    }
+
+    function chooseProject() {
+        let selectProject = $('select[name="Project\[\]"]');
+        let value = $(selectProject).children("option:selected").val();
+   
+        changeValueSelect(value);
+        $(selectProject).on('change', (e) => {
+            let value = $(e.target).val();
+            changeValueSelect(value);
+        });
+    }
+
+    $(document).ready(function () {
+        // Jquery draggable
+        $('.modal-dialog').draggable({
+            handle: ".modal-header"
+        });
+        tagAction(1);
+        chooseProject();
+    })
+</script>
