@@ -1,0 +1,70 @@
+.clear{clear: both;}
+.add-dReport{float: right;margin-left: 10px}
+.filter{/*margin: 20px auto;*/}
+	.filter .select-y ,.filter .select-m,.filter .select-user ,.filter #view-dReport ,.filter #btn-Modal-summaryDR ,.filter #displayDailyReport, #add-only-content, #add-multiple-content{margin-right: 5px; margin-bottom: 10px}
+    .filter .select-y .bootstrap-select.btn-group .dropdown-menu{height: 220px}
+    .filter .select-y,.filter .select-m{float: left;}
+.select-user{float: left}
+/*Modal daily report info*/
+#dReport-info .tab-content{padding-top: 20px}
+#dReport-info small{display: none}
+.SummaryMonth-hide{display: none}
+.nav-tabs > li {
+    position:relative;
+}
+.nav-tabs > li > a {
+    display:inline-block;
+}
+.nav-tabs > li > span {
+    display:none;
+    cursor:pointer;
+    position:absolute;
+    right: 6px;
+    top: 10px;
+    color: red;
+}
+.nav-tabs > li:hover > span {
+    display: inline-block;
+}
+
+
+/*Table*/
+.tbl-dReport table thead tr th,.tbl-dReport table tbody tr td{vertical-align: middle !important;font-size: 90%}
+.tbl-dReport table thead tr th{text-align: center;background: #c6e2ff}
+.tbl-dReport table tbody tr td{font-size: 90%}
+.tbl-dReport .table-bordered>tbody>tr>td,.tbl-dReport .table-bordered>tbody>tr>th, .tbl-dReport .table-bordered>tfoot>tr>td,.tbl-dReport .table-bordered>tfoot>tr>th, .tbl-dReport .table-bordered>thead>tr>td,.tbl-dReport .table-bordered>thead>tr>th{border: 1px solid #111 !important;}
+
+.SummaryMonth{padding-bottom: 30px; padding-top: 20px}
+.SummaryMonth .table-bordered>tbody>tr>td,.SummaryMonth .table-bordered>tbody>tr>th,.SummaryMonth  .table-bordered>tfoot>tr>td,.SummaryMonth  .table-bordered>tfoot>tr>th,.SummaryMonth  .table-bordered>thead>tr>td, .SummaryMonth .table-bordered>thead>tr>th{border: 1px solid #111 !important;text-align: center;vertical-align: middle}
+.SummaryMonth .table-bordered>tbody>tr>td.pName{text-align: left;font-weight: bold; width: 15%}
+.SummaryMonth .table-bordered>tbody>tr>td.td-last{border-left: solid 1px #fff !important; border-bottom: solid 1px #fff !important}
+.SummaryMonth .table-bordered>thead>tr>td,.SummaryMonth .table-bordered>thead>tr>th{border-bottom-width: 1px}
+.SummaryMonth .table-bordered>thead>tr>th{background: #dbeef4}
+.tbl-dReport tbody tr td span.update{font-size: 17px;color: #286090}
+.tbl-dReport tbody tr td span.edit{padding-right: 3px;}
+.tbl-dReport tbody tr td span.edit:hover,.tbl-dReport tbody tr td span.delete:hover{cursor: pointer;color: #f91a05}
+
+.tbl-dReport table tbody tr.too-late td { background-color: orange; }
+
+/* 2018/01/30 */
+.nav-top { display: none; }
+.nav-top { position: fixed; z-index: 1000; top: 0; right: 0; background: #f8f8f8; width: 100%; }
+.nav-top #sub-btn { float: right; margin: 10px 15px; }
+
+/*Summary year*/
+.DR-summary-year .page-header{ margin: 0px; text-align: center;}
+.DR-summary-year .page-header h1{text-transform: uppercase; font-size: 30px; color: #bb3a01; font-weight: bold;}
+.DR-summary-year .page-header .info{text-align: right;}
+.export-excel{text-align: right; padding: 40px auto;}
+@media screen and (max-width: 768px) {
+    .DR-summary-year .page-header h1{font-size: 23px;}
+    .DR-summary-year .page-header .info{font-size: 15px;}
+    .table-responsive{border: 1px solid #fff;}
+}
+
+@media screen and (min-width: 768px) {
+}
+
+@media (max-width: 480px) {
+    .nav-top #sub-btn { margin: 10px 0px 10px 15px; }
+}

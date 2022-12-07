@@ -1,0 +1,223 @@
+.clear{clear: both;}
+h1.page-header {
+	text-transform: capitalize;
+}
+label.control-label{font-size: 90%}
+.bootstrap-select.btn-group .dropdown-menu li a { outline: none; }
+.dataTables_length label { font-weight: normal; } /* Xóa bold "hiển thị 10 bản ghi" */
+table thead th { text-align: center; }
+
+table tbody tr:hover{cursor: pointer;}
+.data-table tbody tr td span.update{font-size: 16px;color: #286090}
+.data-table tbody tr td span.profile a{font-size: 15px}
+.data-table tbody tr td span.edit,.data-table tbody tr td span.viewTotal, .data-table tbody tr td span.profile a{margin-right: 5px; vertical-align: middle;}
+.data-table tbody tr td span.edit:hover,.data-table tbody tr td span.delete:hover,.data-table tbody tr td span.profile a:hover{cursor: pointer;color: #f91a05}
+.data-table tbody tr td span.viewTotal{margin-right: 5px;, padding: 5px;}
+.data-table tbody tr td span.viewTotal:hover{cursor: pointer;background:#f91a05}
+.data-table thead tr th.no-sort{width: 70px !important; text-align: center}
+#logo-akb{display: none;}
+.dataTables_filter{float: right}
+.add-data{text-align: right;margin-bottom: 10px}
+.navbar-top-links .dropdown-messages, .navbar-top-links .dropdown-tasks, .navbar-top-links .dropdown-alerts{width: 110px !important}
+.navbar-top-links .dropdown-messages:hover{cursor: pointer !important}
+
+/*//TIMEKEEPING*/
+.time_keeping .select-m .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn),.time_keeping .select-y .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){width: 80PX;float: left;margin-right: 10PX;}
+.time_keeping .export-excel{text-align: right;}
+.time_keeping .table-timekeeping{margin-top: 30px;}
+/*Header*/
+.page-header{margin: 20px 0 20px;}
+ h1.page-header{font-size: 30px}
+
+
+/*Modal*/
+.modal-body{
+    /*padding-bottom: 0px*/
+}
+.modal-header{padding: 3px 10px;
+    background: #3982c1;
+    border-radius: 5px 5px 0px 0px;
+    color: white;}
+.modal-footer{padding:5px 10px}
+
+/* Cho các thiết bị có kích thước có kích thước >768px */
+@media screen and (min-width: 768px){
+	#logo-akb{width: 100%}
+	#logo-akb{display: block;}
+	/*#project-info #leader input#leader-input{width: 35%;float: left}*/
+	#project-info #leader .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){width: 100%;}
+}
+@media screen and (max-width: 768px){
+	.navbar-top-links .dropdown-messages{width: 110px !important}
+	.dataTables_filter{float: left}
+	/*#project-info #leader input#leader-input{width: 35%;float: left}*/
+	#project-info #leader .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){width: 100%}
+}
+
+textarea {
+    resize: none;
+}
+
+.datetime_txtBox{
+	width: 150px;
+}
+
+.row_select {
+	background-color: #fbfcd3 !important;
+}
+
+sup {
+    color: red;
+    font-weight: bold;
+}
+
+.overlay {width:100%; height:100%; text-align:center;/*  background:url('imgs/trans_bg.png');  */position:fixed; top:0; left:0; z-index:1000; display:none}
+.loading-block {position:relative; margin-top:10px; display:none}
+.loading {width:220px; height:18px; background:url('imgs/loading.gif') no-repeat center center; position:relative; display:inline-block; top:50%}
+
+nav#menu-admin div.sidebar ul#side-menu li:nth-child(n+2) {display: none;}
+
+
+.alertify .ajs-dialog {
+  background-color: white;
+  box-shadow: 0px 15px 20px 0px rgba(0, 0, 0, 0.25);
+  border-radius: 2px;
+}
+.alertify .ajs-header {
+  color: black;
+  font-weight: bold;
+  background: #fafafa;
+  border-bottom: #eee 1px solid;
+  border-radius: 2px 2px 0 0;
+}
+.alertify .ajs-body {
+  color: black;
+}
+.alertify .ajs-body .ajs-content .ajs-input {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin: 4px;
+  border-radius: 2px;
+  border: 1px solid #CCC;
+}
+.alertify .ajs-body .ajs-content p {
+  margin: 0;
+}
+.alertify .ajs-footer {
+  background: #fbfbfb;
+  border-top: #eee 1px solid;
+  border-radius: 0 0 2px 2px;
+}
+.alertify .ajs-footer .ajs-buttons .ajs-button {
+  background-color: transparent;
+  color: #000;
+  border: 0;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok {
+  color: #3593D2;
+}
+.alertify-notifier .ajs-message {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  text-align: center;
+  border: solid 1px #ddd;
+  border-radius: 2px;
+}
+.alertify-notifier .ajs-message.ajs-success {
+  color: #fff;
+  background: rgba(91, 189, 114, 0.95);
+  /*text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.5);*/
+  text-shadow:none;
+}
+.alertify-notifier .ajs-message.ajs-error {
+  color: #fff;
+  background: rgba(217, 92, 92, 0.95);
+  /*text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.5);*/
+  text-shadow:none;
+}
+.alertify-notifier .ajs-message.ajs-warning {
+  background: rgba(252, 248, 215, 0.95);
+  border-color: #999;
+}
+.ui-datepicker-week-end a {
+    background-image: none;
+    background-color: red;
+}
+
+.question-border {
+  border: 1px solid #2e6da4;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.q-title {
+  font-weight: bold;
+  position: absolute;
+  top: 5px;
+  background: #fff;
+  padding: 0px 3px;
+}
+
+.q-content {
+  margin: 10px 0 0 15px;
+}
+
+#a-body ul {
+  margin-top: 25px;
+  list-style-type: none;
+  padding-left: 15px;
+}
+
+#a-body label {
+  /*width: 100%;*/
+  width: 94%;
+  font-weight: normal;
+}
+
+#a-body input[type=radio],
+#a-body input[type=checkbox] {
+  float: left;
+  margin-right: 5px;
+}
+
+.a-title {
+  top: -11px;
+}
+
+.answer-border {
+  position: relative;
+  border: 1px solid #2e6da4;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 20px 0 10px 0;
+}
+
+#btnAddAnswer {
+  cursor: pointer;
+}
+
+#btnAddAnswer i {
+  font-size: 1.3em;
+  color: red;
+  margin-left: 14px;
+  margin-bottom: 20px;
+}
+
+.toolEdit {
+  position: absolute;
+  width: 27px;
+  right: 10px;
+  background: #fff;
+  z-index: 9999;
+}
+
+.btnAEdit:hover, .btnADel:hover {
+  color: red;
+  cursor: pointer;
+  transition: all ease 0.2s;
+}

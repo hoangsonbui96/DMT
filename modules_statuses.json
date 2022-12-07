@@ -1,0 +1,8 @@
+{
+    "TaskRequest": true,
+    "Document": true,
+    "Event": true,
+    "Recruit": true,
+    "ProjectManager": true,
+    "Leave": true
+}

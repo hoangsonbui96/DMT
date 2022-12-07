@@ -1,0 +1,141 @@
+.thead-th-custom {
+	text-align: center;
+	background: #c6e2ff;
+	border: 1px solid black;
+}
+.time_keeping .filter{margin-top: 20px}
+.time_keeping .group_btn{margin-top: 20px; text-align: right;}
+
+.trSunday {
+	background: #FF99CC !important;
+}
+
+.trSaturday {
+	background: #CCCCFF !important;
+}
+
+.table-timekeeping-detail {
+    display: block;
+}
+.time_keeping .filter {
+	margin-top: 20px
+}
+.time_keeping .group_btn {
+	margin-top: 20px;
+	text-align: right;
+}
+
+.row_select {
+	background-color: #fbfcd3 !important;
+}
+
+.table-timekeeping-detail {
+	margin-top: 20px;
+}
+
+/* #timekeeping-search {
+    margin-bottom: 20px;
+} */
+#timeKeeping-info .timepicker-picker  table td  a span,
+#timeKeeping-info .timepicker-picker  table td,
+#timeKeeping-info .timepicker-picker  table td  span
+{height: 30px !important;line-height: 30px !important;width: 30px !important; line-height:30px !important; padding:0px !important;}
+.bootstrap-datetimepicker-widget.dropdown-menu {width: auto;}
+.bootstrap-datetimepicker-widget .datepicker table {width: 19em;}
+
+
+.table-timekeeping{margin-bottom: 30px}
+.table-timekeeping .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th{text-align: center !important}
+.table-timekeeping .table-bordered>tbody>tr>td,.table-timekeeping .table-bordered>tbody>tr>th, .table-timekeeping .table-bordered>tfoot>tr>td,.table-timekeeping .table-bordered>tfoot>tr>th, .table-timekeeping .table-bordered>thead>tr>td,.table-timekeeping .table-bordered>thead>tr>th{border: 1px solid black !important; vertical-align: middle !important;}
+.table-timekeeping-detail .table-bordered>tbody>tr>td,.table-timekeeping-detail .table-bordered>tbody>tr>th, .table-timekeeping-detail .table-bordered>tfoot>tr>td,.table-timekeeping-detail .table-bordered>tfoot>tr>th, .table-timekeeping-detail .table-bordered>thead>tr>td,.table-timekeeping-detail .table-bordered>thead>tr>th{border: 1px solid black !important; text-align: center !important;}
+.time_keeping .select-user .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){width: 170px; float: left; margin-right: 10px}
+.filter #date{float: left; margin-right: 10px; width: 120px}
+
+/*//Import data*/
+/* layout.css Style */
+.image-preview-input {
+    position: relative;
+    overflow: hidden;
+    margin: 0px;
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc;
+}
+.image-preview-input input[type=file] {
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin: 0;
+	padding: 0;
+	font-size: 20px;
+	cursor: pointer;
+	opacity: 0;
+	filter: alpha(opacity=0);
+}
+.image-preview-input-title {
+    margin-left:2px;
+}
+.content-import{
+}
+
+#sTime, #eTime {
+	width: 100%;
+}
+
+/*rank_summary*/
+.rank_summary{width: 250px; bottom: 0; right: 20px; z-index: 99999;position: fixed;}
+	.rank_summary .header{background: #008080; padding: 10px; color: #fff;border-top-left-radius: 1em;border-top-right-radius: 1em;}
+		.rank_summary .header:hover{cursor: pointer;}
+		.rank_summary .header span{
+			padding-right: 5px;
+			float: right;
+			position: relative;
+			-webkit-animation: anima 2s linear 0.5s infinite alternate; /* Safari 4.0 - 8.0 */
+		    animation: anima 2s linear 0.5s infinite alternate;
+		}
+		/* Safari 4.0 - 8.0 */
+		@-webkit-keyframes anima {
+		    0% {top:-5px;}
+		    25% {top:0px;}
+		    50% {top:5px;}
+		    75% {top:0px;}
+		    100% {top:-5px;}
+		}
+
+		/* Standard syntax */
+		@keyframes anima {
+		    0% {top:-5px;}
+		    25% {top:0px;}
+		    50% {top:5px;}
+		    75% {top:0px;}
+		    100% {top:-5px;}
+		}
+
+	.rank_summary .content{background: #c6e2ff;background-color: rgba(147,200,255,0.9); padding: 10px;height: 200px;display: none}
+	/*.rank_summary .content{animation: animContent 2s;}
+	.rank_summary .content p#firstest{animation: animContent 2s;}*/
+
+    .hover-point:hover {
+        background: #c6e2ff;
+        cursor: pointer;
+    }
+    .selected-tr {
+        background-color: rgb(255, 99, 132) !important;
+        cursor: pointer;
+        color: white;
+    }
+    .weekend-7 td {
+        background: #CCCCFF !important;
+    }
+
+    .weekend-7 {
+        background: #CCCCFF !important;
+    }
+
+    .weekend-cn td {
+        background: #FF99CC !important;
+    }
+
+    .weekend-cn {
+        background: #FF99CC !important;
+    }

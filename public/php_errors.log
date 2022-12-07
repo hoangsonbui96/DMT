@@ -1,0 +1,22 @@
+[16-Nov-2022 09:45:40 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 168
+[16-Nov-2022 09:46:41 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 168
+[16-Nov-2022 09:47:53 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 154
+[16-Nov-2022 09:49:18 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 168
+[16-Nov-2022 09:50:18 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 169
+[16-Nov-2022 09:51:18 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 154
+[16-Nov-2022 09:52:19 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 164
+[16-Nov-2022 09:53:25 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\Modules\Leave\Http\Controllers\LeaveController.php on line 164
+[17-Nov-2022 09:48:36 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 09:49:41 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 10:04:51 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 10:15:02 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 52428808 bytes) in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 335
+[17-Nov-2022 10:43:22 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 10:43:22 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 32768 bytes) in D:\DMT\vendor\symfony\debug\Exception\FatalErrorException.php on line 1
+[17-Nov-2022 10:43:54 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 4194304 bytes) in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 10:43:54 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 4194304 bytes) in D:\DMT\vendor\laravel\framework\src\Illuminate\Foundation\Bootstrap\HandleExceptions.php on line 147
+[17-Nov-2022 10:43:59 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 16777224 bytes) in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 10:45:32 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[17-Nov-2022 11:27:23 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 331
+[29-Nov-2022 11:24:02 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 331
+[29-Nov-2022 11:25:03 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 337
+[29-Nov-2022 11:26:15 Asia/Ho_Chi_Minh] PHP Fatal error:  Maximum execution time of 60 seconds exceeded in D:\DMT\vendor\laravel\framework\src\Illuminate\Database\Connection.php on line 331
