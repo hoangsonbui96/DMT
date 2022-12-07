@@ -699,7 +699,6 @@ class LeaveController extends AdminController
             $startDate = Carbon::parse($item->SDate);
             $endDate = Carbon::parse($item->EDate);
 
-            
 
 
 
@@ -707,6 +706,9 @@ class LeaveController extends AdminController
 
 
 
+
+
+ 
 
 
 
@@ -759,7 +761,7 @@ class LeaveController extends AdminController
             }
             //TH2 : ngày SDate = ngày EDate(chỉ nghỉ trong 1 ngày)
             else{
-
+                //hehehe
             }
         }
     }
