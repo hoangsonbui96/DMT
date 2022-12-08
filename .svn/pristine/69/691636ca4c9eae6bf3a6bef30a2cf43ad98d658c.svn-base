@@ -1,0 +1,367 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\ApiBaseController;
+use App\Http\Controllers\Controller;
+use App\MasterData;
+use App\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use App\Model\CheckinHistory;
+use App\Model\QrCode;
+use App\Model\Timekeeping;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Model\PushToken;
+
+
+class ApiLoginController extends ApiBaseController
+{
+    const FOMAT_DISPLAY_DMY = 'd/m/Y';
+    const FOMAT_DB_YMDHI = 'Y-m-d H:i';
+    const FOMAT_DB_YMDHIS = 'Y-m-d H:i:s';
+
+    //
+    public function login(Request $request)
+    {
+        $array = $request->only('username', 'password');
+        if (Auth::attempt($array)) {
+            $user = Auth::user();
+            $tokenResult = $user->createToken('Personal Access Token');
+            $menu = Controller::getMenuRecord($user)->values()->all();
+            $role = AdminController::getAllRoleAssign();
+
+            foreach ($menu as $_menu) {
+                $_menu['name'] = __('menu.' . $_menu['LangKey']);
+                unset($_menu['RouteName']);
+                unset($_menu['LangKey']);
+                unset($_menu['created_at']);
+                unset($_menu['updated_at']);
+            }
+
+            $data = [
+                'access_token' => $tokenResult->accessToken,
+                'info_user' => User::query()->select('users.*', 'rooms.Name')
+                    ->leftJoin('rooms', 'rooms.id', '=', 'users.RoomId')
+                    ->where('users.id', $request->user()->id)->get(),
+                'menus' => $menu,
+                'role' => $role
+            ];
+
+            // luu token devices firebase
+            $objpushtoken = new PushToken;
+            $objpushtoken->UserID = $request->user()->id;
+            $objpushtoken->token_push = $request["token_device"];
+            $objpushtoken->allow_push = 1;
+            $objpushtoken->role_group = $request->user()->role_group;
+            $objpushtoken->save();
+
+            return AdminController::responseApi(200, null, null, $data);
+        } else {
+            return AdminController::responseApi(401, __('admin.error.login-fail'));
+        }
+    }
+
+    public function signup(Request $request)
+    {
+        $Master1 = MasterData::where('DataValue', 'WT001')->first();
+        $arrCheck = [
+            'user_name' => 'unique:users,username',
+        ];
+        $validator = Validator::make($request->all(), $arrCheck,
+            [
+                'user_name.unique' => 'Tên đăng nhập đã được sử dụng.',
+            ]);
+
+        if ($validator->fails()) {
+            return AdminController::responseApi(422, $validator->errors()->first());
+        }
+
+        $data = [
+            'user_name' => 'username',
+            'password' => 'password',
+            'full_name' => 'FullName',
+            'tel' => 'Tel',
+        ];
+        $user = new User();
+        foreach ($data as $key => $value) {
+            if (isset($request->$key) && $request->$key) {
+                if ($key == 'password') {
+                    $user->$value = Hash::make($request->$key);
+                } else {
+                    $user->$value = $request->$key;
+                }
+            }
+        }
+        $user->STimeOfDay = $Master1 ? $Master1->Name : '08:30';
+        $user->ETimeOfDay = $Master1 ? $Master1->DataDescription : '17:30';
+        $user->SDate = Carbon::now()->toDateString();
+        $user->Active = 1;
+        $user->permission = 2;
+        $user->role_group = 4;
+        $user->save();
+        return AdminController::responseApi(200, null, __('admin.success.signup'));
+    }
+
+    public function logout(Request $request)
+    {
+//        $request->user()->token()->revoke();
+//        Auth::user()->tokens->each(function($token) {
+//            $token->delete();
+//        });
+        if (strpos(\Request::getRequestUri(), 'api') !== false) {
+            if($request['token_device'] != null){
+                $objpushtoken = PushToken::where('UserID',Auth::user()->id)->where('token_push',$request['token_device'])->first();
+                if($objpushtoken != null){
+                    $one = PushToken::find($objpushtoken->id);
+                    $one->delete();
+                }
+            }
+        }
+
+
+        $accessToken = Auth::user()->token();
+        DB::table('oauth_refresh_tokens')
+            ->where('access_token_id', $accessToken->id)
+            ->update([
+                'revoked' => true
+            ]);
+
+        $accessToken->revoke();
+
+
+        return AdminController::responseApi(200, '', __('admin.success.logout'));
+    }
+
+    public function user(Request $request)
+    {
+        return response()->json($request->user());
+    }
+
+    public function checkin(Request $request)
+    {
+
+        if (!isset($request->user_id) || !isset($request->qr_code) || !isset($request->check_in_time)) {
+            return AdminController::responseApi(422, __('admin.error.data-missing'));
+        }
+
+        $user = User::find($request->user_id);
+
+        if (!$user) {
+            Log::info(Carbon::now()->toDateTimeString() . ' maqr: ' . $request->qr_code . ' user: ' . $request->user_id . ' lỗi: user k tồn tại');
+            return AdminController::responseApi(422, __('admin.error.user-missing'));
+        }
+
+        $now = Carbon::now()->format(self::FOMAT_DB_YMDHIS);
+        $subMinutes = Carbon::now()->subMinutes(15)->format(self::FOMAT_DB_YMDHIS);
+
+        $check_15m = CheckinHistory::where('UserID', '=', $request->user_id)
+            ->where('CheckinTime', '>', $subMinutes)
+            ->first();
+
+        if ($check_15m) {
+            Log::info(Carbon::now()->toDateTimeString() . ' maqr: ' . $request->qr_code . ' user: ' . $request->user_id . ' lỗi: da check công 15 phut sau check lại');
+            return AdminController::responseApi(422, __('admin.error.checkin-15p', ['time' => 15 - Carbon::parse($now)->diffInMinutes(Carbon::parse($check_15m->CheckinTime))]));
+        }
+
+        // Log::info(Carbon::now()->toDateTimeString().' maqr: '.$request->qr_code.' user: '.$request->user_id);
+        if ($request->qr_code && strpos($request->qr_code, '---') != false) {
+            $list_string = explode('---', $request->qr_code);
+            $qrcode_string = $list_string[1];
+            if (count($list_string) == 3) {
+                $device_token = $list_string[2];
+            } else {
+                $device_token = '';
+            }
+        } else {
+            $qrcode_string = $request->qr_code;
+            $device_token = '';
+        }
+
+//        $checkInTimeFull = Carbon::parse($request->check_in_time)->toDateTimeString();
+        $qrcode = QrCode::where('QRCode', $qrcode_string)
+            ->where('SDate', '<=', $now)
+            ->where('EDate', '>=', $now)
+            ->first();
+
+        if (!$qrcode) {
+            Log::info(Carbon::now()->toDateTimeString() . ' maqr: ' . $request->qr_code . ' user: ' . $request->user_id . ' lỗi: QR Code bị lỗi');
+            return AdminController::responseApi(422, __('admin.error.qr-code'));
+        }
+
+        try {
+            $checkinHistory = new CheckinHistory();
+            $checkinHistory->UserId = $request->user_id;
+            $checkinHistory->QRCodeID = $qrcode->id;
+            $checkinHistory->DeviceName = $request->device_name;
+            $checkinHistory->DeviceInfo = $request->device_info;
+            $checkinHistory->OsVersion = $request->os_version;
+            $checkinHistory->Type = 'QR Code';
+            $checkinHistory->CheckinTime = $now;
+            $checkinHistory->RequestTime = Carbon::parse(date(self::FOMAT_DB_YMDHIS, strtotime(str_replace('/', '-', $request->check_in_time))))->format(self::FOMAT_DB_YMDHIS);
+            $checkinHistory->MacAddress = isset($request->mac_address) ? $request->mac_address : null;
+            $checkinHistory->save();
+
+            $userEdateTime = Carbon::parse($user->ETimeOfDay)->format(self::FOMAT_DB_YMDHIS);
+            $check_checkin = Timekeeping::where('UserID', $request->user_id)
+                ->where('Date', '=', Carbon::parse($now)->toDateString())->first();
+
+            if (isset($check_checkin) && $check_checkin && isset($check_checkin->TimeIn) && $check_checkin->TimeIn != '' && $check_checkin->TimeIn != '00:00:00') {
+                $check_checkin->TimeOut = Carbon::parse($now)->toTimeString();
+                $check_checkin->save();
+            } elseif (isset($check_checkin) && $check_checkin && (!isset($check_checkin->TimeIn) || $check_checkin->TimeIn == '' || $check_checkin->TimeIn == '00:00:00')) {
+                if (Carbon::parse($now) >= Carbon::parse($userEdateTime)) {
+                    $check_checkin->TimeOut = Carbon::parse($now)->toTimeString();
+                } else {
+                    $check_checkin->TimeIn = Carbon::parse($now)->toTimeString();
+                }
+                $check_checkin->save();
+            } else {
+                $check_checkin = new Timekeeping();
+                $check_checkin->UserID = $request->user_id;
+                $check_checkin->Day = Carbon::parse($now)->format('d');
+                $check_checkin->Date = Carbon::parse($now)->toDateString();
+
+                $check_checkin->STimeOfDay = $user->STimeOfDay;
+                $check_checkin->ETimeOfDay = $user->ETimeOfDay;
+                if (Carbon::parse($now) >= Carbon::parse($userEdateTime)) {
+                    $check_checkin->TimeIn = null;
+                    $check_checkin->TimeOut = Carbon::parse($now)->toTimeString();
+                } else {
+                    $check_checkin->TimeIn = Carbon::parse($now)->toTimeString();
+                    $check_checkin->TimeOut = null;
+                }
+                $check_checkin->SBreakOfDay = isset(Auth::user()->SBreakOfDay) ? Auth::user()->SBreakOfDay : MasterData::where('DataValue', 'WT002')->first()['Name'];
+                $check_checkin->EBreakOfDay = isset(Auth::user()->EBreakOfDay) ? Auth::user()->EBreakOfDay : MasterData::where('DataValue', 'WT002')->first()['DataDescription'];
+                $check_checkin->save();
+            }
+
+            Log::info(Carbon::now()->toDateTimeString() . ' maqr: ' . $request->qr_code . ' user: ' . $request->user_id . ' success: chấm công thành công');
+            return AdminController::responseApi(200, '', __('admin.success.check-in'));
+        } catch (\Exception $e) {
+            return AdminController::responseApi(500, $e->getMessage());
+        } finally {
+            // $body = [
+            //     'type'  => 'audio',
+            //     'msg'   => asset('audio/translate_tts.mp3')
+            // ];
+
+            // Controller::sendNoticationRealTime($device_token, '', $body);
+        }
+    }
+
+    public function redirect(Request $request, $data)
+    {
+        // $url = 'akbone://' + $data;
+        // dd('akbone://'. $data);
+        return redirect()->to('akbone://' . $data);
+    }
+
+    public function checkinCard(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|int',
+            'check_in_time' => 'required|date_format:Y-m-d H:i:s',
+        ], [
+            'user_id.required' => 'Thiếu ID user',
+            'user_id.int' => 'ID user sai định dạng',
+            'check_in_time.required' => 'Thiếu thời gian chấm công',
+            'check_in_time.date_format' => 'Sai định dạng thời gian chấm công'
+        ]);
+        if ($validator->fails()) {
+            return AdminController::responseApi(422, $validator->messages());
+        }
+        $user = User::find($request->get('user_id'));
+        if (!$user) {
+            return AdminController::responseApi(422, __('admin.error.user-missing'));
+        }
+        $last_checkin = CheckinHistory::query()
+            ->where('UserID', '=', $request->get('user_id'))->latest('CheckinTime')->pluck('CheckinTime')->first();
+        $now = Carbon::parse($request->get('check_in_time'));
+		
+        if($last_checkin) 
+		{
+			$next_checkin = Carbon::parse($last_checkin)->addMinutes(15);
+
+			$diff_minus = $now->diffInMinutes(Carbon::parse($next_checkin), false);
+			
+			if ($diff_minus <= 15 && $diff_minus > 0) {
+				
+				return AdminController::responseApi(422, __('admin.error.checkin-15p', ['time' => $diff_minus]));
+			}
+		
+			if ($diff_minus == 0) {
+				$diff_seconds = $now->diffInSeconds(Carbon::parse($next_checkin), false);
+				if ($diff_seconds >= 0) {
+					return AdminController::responseApi(422, __('admin.error.checkin-e15p', ['time' => $diff_seconds]));
+				}
+			}
+		}
+		
+        try {
+            CheckinHistory::create([
+                'UserId' => $request->get('user_id'),
+                'QRCodeID' => $request->get('user_id'),
+                'Type' => 'Card',
+                'CheckinTime' => $request->get('check_in_time'),
+                'RequestTime' => Carbon::now()->format(self::FOMAT_DB_YMDHIS)
+            ]);
+            $time_end = Carbon::parse($request->get('check_in_time'))->format(self::FOMAT_DB_YMD) . ' ' . $user->ETimeOfDay;
+            $userEDateTime = Carbon::parse($time_end);
+            $check_checkin = Timekeeping::where('UserID', $request->get('user_id'))
+                ->where('Date', '=', $now->toDateString())->first();
+
+            if (isset($check_checkin) && $check_checkin && $check_checkin->TimeIn != null && $check_checkin->TimeOut != null) {
+                if ($now->toTimeString() <= $check_checkin->TimeIn) {
+                    $check_checkin->TimeIn = $now->toTimeString();
+                } elseif ($now >= $check_checkin->TimeOut) {
+                    $check_checkin->TimeOut = $now->toTimeString();
+                }
+            } elseif (isset($check_checkin) && $check_checkin && $check_checkin->TimeIn != null && $check_checkin->TimeOut == null) {
+                if ($check_checkin->TimeIn >= $now->toTimeString()) {
+                    $check_checkin->TimeOut = $check_checkin->TimeIn;
+                    $check_checkin->TimeIn  = $now->toTimeString();
+                } else {
+                    $check_checkin->TimeOut = $now->toTimeString();
+                }
+            } elseif (isset($check_checkin) && $check_checkin && $check_checkin->TimeIn == null) {
+                $type = $now->gte(Carbon::parse($userEDateTime)) ? 'TimeOut' : 'TimeIn';
+                $check_checkin->$type = $now->toTimeString();
+            } else {
+                $check_checkin = new Timekeeping();
+                $check_checkin->UserID = $request->user_id;
+                $check_checkin->Day = $now->format('d');
+                $check_checkin->Date = $now->toDateString();
+                $check_checkin->STimeOfDay = $user->STimeOfDay;
+                $check_checkin->ETimeOfDay = $user->ETimeOfDay;
+                if ($now->gt(Carbon::parse($userEDateTime))) {
+                    $check_checkin->TimeIn = null;
+                    $check_checkin->TimeOut = $now->toTimeString();
+                } else {
+                    $check_checkin->TimeIn = $now->toTimeString();
+                    $check_checkin->TimeOut = null;
+                }
+            }
+
+            $check_checkin->SBreakOfDay = isset(Auth::user()->SBreakOfDay) ? Auth::user()->SBreakOfDay : MasterData::where('DataValue', 'WT002')->first()['Name'];
+            $check_checkin->EBreakOfDay = isset(Auth::user()->EBreakOfDay) ? Auth::user()->EBreakOfDay : MasterData::where('DataValue', 'WT002')->first()['DataDescription'];
+            $check_checkin->IsInCpn = ($user->workAt === null || $user->workAt === "") ? 1 : $user->workAt;
+            $check_checkin->UserActive = implode(",", User::query()
+                ->select("id")
+                ->where('deleted', '!=', 1)
+                ->where('role_group', '!=', 1)
+                ->where('Active', 1)
+                ->pluck("id")->toArray());
+            $check_checkin->save();
+            Log::info(Carbon::now()->toDateTimeString() . ' maqr: ' . $request->qr_code . ' user: ' . $request->user_id . ' success: chấm công thành công');
+            return AdminController::responseApi(200, '', __('admin.success.check-in'));
+        } catch (\Exception $e) {
+            return AdminController::responseApi(500, $e->getMessage());
+        }
+    }
+}

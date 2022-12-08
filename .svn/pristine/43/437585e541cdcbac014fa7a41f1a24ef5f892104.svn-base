@@ -1,0 +1,566 @@
+<?php
+
+namespace Modules\Leave\Http\Controllers;
+
+use App\CalendarEvent;
+use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Admin\AdminController;
+use App\Model\Absence;
+use App\Model\TimeKeepingAllDay;
+use App\TimekeepingNew;
+use App\User;
+use Carbon\Carbon;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Modules\Leave\Entities\Leave;
+
+class LeaveController extends AdminController
+{
+    protected $view;
+    protected $export;
+    const KEYMENU = array(
+        "view" => "Leave",
+        "export" => "LeaveExport",
+        "lock" => "LeaveLock",
+    );
+
+    const LEAVE_TIME_PER_MONTH = 8 * 3; //thời gian nghỉ phép tối đa trong 1 tháng
+    const MID_MONTH_DAY = 15; //ngày giữa tháng
+    const WORKING_HOURS_PER_DAY = 8; //số giờ làm việc trong 1 ngày
+    const MINUS_PER_HOUR = 60; // số phút 1 giờ
+    const TYPE_ABSENCE = ['VM001', 'VM002', 'VM003', 'VM004', 'VM005'];
+    const NO_TIMEKEEPING = 1;
+    const LATE_SOON = 2;
+
+    public function __construct(Request $request)
+    {
+        parent::__construct($request);
+        $this->middleware('auth');
+        $array = $this->RoleView('Leave', ['Leave']);
+        $this->menu = $array['menu'];
+        foreach (self::KEYMENU as $key => $value) {
+            foreach ($array['role'] as $row) {
+                if ($value == $row->alias)
+                    $this->$key = $row;
+            }
+        }
+    }
+
+    public function index(Request $request)
+    {
+        $validated = $request->validate([
+            "users_search" => "nullable|array",
+            "users_search.*" => "required|integer",
+            "date" => "nullable|date_format:d/m/Y"
+        ]);
+
+        $users = $this->data["users"] = $this->GetListUser(self::USER_ACTIVE_FLAG);
+        $search_date = isset($validated["date"])
+            ? Carbon::createFromFormat(self::FOMAT_DISPLAY_DMY, $validated["date"])
+            : Carbon::now();
+        $user_select = isset($validated["users_search"])
+            ? $validated["users_search"]
+            // : $this->data["users"]->pluck("id")->toArray();
+            : [Auth::user()->id];
+
+        $user_leave = $this->data["users_leave"] = $this->getDataUser($user_select, $search_date);
+        $search_date = Carbon::parse($search_date)->format('d-m-Y');
+        $s_day = Carbon::createFromFormat('d-m-Y', $search_date)->format('d');
+        $s_month = Carbon::createFromFormat('d-m-Y', $search_date)->format('m');
+        $s_year = Carbon::createFromFormat('d-m-Y', $search_date)->format('Y');
+
+        foreach ($user_leave as $user) {
+            $ODate = $user->OfficialDate; //ngày kí hợp đồng chính thức
+            $o_day = date('d', strtotime($ODate));
+            $o_month = date('m', strtotime($ODate));
+            $o_year = date('Y', strtotime($ODate));
+
+            $T_LastYear = Leave::query()
+                ->where('UserID', $user->id)
+                ->where('DecisiveYear', ((int)$s_year - 1))
+                ->select('TimeRemaining')
+                ->first();
+            if (!$T_LastYear) {
+                $last_year_before = 0;
+            } else {
+                $last_year_before = $T_LastYear->TimeRemaining;
+            }
+            $time_available =  $this_year_before = $this_year_after = $absence = $beyond_time = $no_timekeeping = $late_soon = 0;
+            $last_year_after = $last_year_before;
+
+            $star_month = ($o_year == $s_year) ? $o_month : 1;
+            for ($month = $star_month; $month <= $s_month; $month++) {
+                $daysOffPerMonth = $this->numberOfDaysOffMonth($month, $s_year, $ODate); // số ngày nghỉ của 1 tháng
+                //thời gian nghỉ phép đã đăng kí của từng tháng
+                $data = $this->getDataKeeping($user, $month, $search_date);
+                $absence = $data['registered'];
+                if ($absence > self::LEAVE_TIME_PER_MONTH && $month != $s_month) {
+                    $absence = self::LEAVE_TIME_PER_MONTH;
+                }
+                // $unregistered = $this->unregistered($user, $month, $search_date);
+                $no_timekeeping = $data['no_timekeeping'];
+                $late_soon =  $data['late_soon'];
+
+                if ($o_year == $s_year) {
+                    $last_year_before = $last_year_after = 0;
+                    if ($o_month == $s_month) {
+                        if ($o_day < self::MID_MONTH_DAY && $s_day > self::MID_MONTH_DAY) {
+                            $time_of_month = 1 * self::WORKING_HOURS_PER_DAY;
+                        } else {
+                            $time_of_month = 0;
+                        }
+                    } else if ($o_month < $s_month) {
+                        if ($month < $s_month || $month == $s_month && $s_day > self::MID_MONTH_DAY) {
+                            $time_of_month = $daysOffPerMonth * self::WORKING_HOURS_PER_DAY;
+                        } else {
+                            $time_of_month = 0;
+                        }
+                    }
+                    if ($this_year_after < 0) {
+                        $this_year_after = 0;
+                    }
+                    $this_year_before = $this_year_after + $time_of_month;
+
+                    $time_available = $time_of_month - $absence - $late_soon - $no_timekeeping;
+                } else if ($o_year < $s_year) {
+                    if ($month < $s_month || $month == $s_month && $search_date > self::MID_MONTH_DAY) {
+                        $time_of_month = $daysOffPerMonth * self::WORKING_HOURS_PER_DAY;
+                    } else {
+                        $time_of_month = 0;
+                    }
+                    //thời gian reset lại ví nghỉ phép của năm trước
+                    if ($month >= 7) {
+                        $last_year_before = $last_year_after = 0;
+                    } else {
+                        $last_year_before = $last_year_after;
+                    }
+                    if ($month != 1) {
+                        $last_year_before = $last_year_after;
+                    }
+                    if ($this_year_after < 0) {
+                        $this_year_after = 0;
+                    }
+                    $this_year_before = $this_year_after + $time_of_month;
+                    if ($last_year_after > ($absence + $late_soon + $no_timekeeping)) {
+                        $last_year_after -=  ($absence + $late_soon + $no_timekeeping);
+                        $time_available = $time_of_month;
+                    } else {
+                        $time_available = $time_of_month + $last_year_after - ($absence + $late_soon + $no_timekeeping);
+                        $last_year_after = 0;
+                    }
+                }
+                $this_year_after += $time_available;
+                if ($time_available < 0) {
+                    $time_available  = 0;
+                }
+            }
+            $AbsenceSearchMonth = $data['absences_search_month'];
+
+            if (empty($ODate) || strtotime($ODate) > strtotime($search_date)) {
+                $this_year_before = $last_year_before = $last_year_after =  0;
+                $this_year_after = $this_year_before - ($AbsenceSearchMonth + $late_soon + $no_timekeeping);
+            }
+            //tính số thời ghian nghỉ phép vượt quá
+            $total_time = $last_year_before + $this_year_before;
+            $total_absence = ($AbsenceSearchMonth + $late_soon + $no_timekeeping);
+            if ($total_time < self::LEAVE_TIME_PER_MONTH) {
+                if ($total_absence < self::LEAVE_TIME_PER_MONTH) {
+                    if ($total_time > $total_absence) {
+                        $beyond_time = 0;
+                    } else {
+                        $beyond_time = $total_absence - $total_time;
+                    }
+                } else if ($total_absence == self::LEAVE_TIME_PER_MONTH) {
+                    $beyond_time = $total_absence - $total_time;
+                } else {
+                    $beyond_time = $total_absence - $total_time;
+                }
+            } else if ($total_time == self::LEAVE_TIME_PER_MONTH) {
+                if ($total_absence < self::LEAVE_TIME_PER_MONTH) {
+                    $beyond_time = 0;
+                } else if ($total_absence == self::LEAVE_TIME_PER_MONTH) {
+                    $beyond_time = 0;
+                } else {
+                    $beyond_time = $total_absence - self::LEAVE_TIME_PER_MONTH;
+                }
+            } else {
+                if ($total_absence < self::LEAVE_TIME_PER_MONTH) {
+                    $beyond_time = 0;
+                } else if ($total_absence == self::LEAVE_TIME_PER_MONTH) {
+                    $beyond_time = 0;
+                } else {
+                    if ($total_time > $total_absence) {
+                        $beyond_time = $total_absence - self::LEAVE_TIME_PER_MONTH;
+                    } else {
+                        $beyond_time = $total_absence - self::LEAVE_TIME_PER_MONTH;
+                    }
+                }
+            }
+            $user->this_year_after = $this_year_after > 0 ? $this_year_after : 0;
+            if ($this_year_before  > self::LEAVE_TIME_PER_MONTH && $AbsenceSearchMonth  > self::LEAVE_TIME_PER_MONTH) {
+                $user->this_year_after = $this_year_before - self::LEAVE_TIME_PER_MONTH;
+            }
+            $user->beyond_time = $beyond_time;
+            $user->last_year_before = $last_year_before;
+            $user->this_year_before = $this_year_before;
+            $user->last_year_after = $last_year_after;
+            $user->AbsenceSearchMonth =  $AbsenceSearchMonth;
+            $user->no_timekeeping = $no_timekeeping;
+            $user->late_soon = $late_soon;
+        }
+
+        $this->data['export'] = $this->export;
+        $this->data['lock'] = $this->lock;
+        if (isset($validated["date"]) || isset($validated["users_search"])) {
+            return view('leave::includes.leave-load', $this->data);
+        }
+        return view("leave::layouts.leave-list", $this->data);
+    }
+
+    public function getDataUser($users_search, $date)
+    {
+        $date = $date->format("Y-m-d");
+        $users = User::query()
+            ->select("id", "FullName", "OfficialDate", "SDate")
+            ->where('deleted', '!=', 1)
+            ->where('role_group', '!=', 1)
+            ->where('Active', 1)
+            ->whereIn("id", $users_search)
+            ->orderBy("FullName")
+            ->get();
+        return $users;
+    }
+
+    // tính ngày nghỉ phép của 1 tháng
+    public function numberOfDaysOffMonth($month, $s_year, $ODate)
+    {
+        $month_in_5year = 5 * 12;
+        $year1 = date('Y', strtotime($ODate));
+        $month1 = date('m', strtotime($ODate));
+        $experiences = ((($s_year - $year1) * 12) + ($month - $month1)) / $month_in_5year;
+        $daysOffPerMonth = ceil($experiences);
+        return $daysOffPerMonth;
+    }
+
+    public function getDataKeeping($user, $month, $search_date)
+    {
+        $ODate = $user->OfficialDate != null ? $user->OfficialDate : $user->SDate;
+        $s_day = date('d', strtotime($search_date));
+        $s_month = date('m', strtotime($search_date));
+        $s_year = date('Y', strtotime($search_date));
+        $data = [];
+        if ($month == $s_month) {
+            $date = Carbon::createFromFormat('d-m-Y', $s_day . '-' . $month . '-' . $s_year);
+            $lastOfMonth = Carbon::parse($date)->endOfDay();
+            $firstOfMonth = Carbon::parse($date->firstOfMonth())->startOfDay();
+            $day = $lastOfMonth->format('d');
+        } else {
+            $date = Carbon::createFromFormat('d-m-Y', '01-' . $month . '-' . $s_year);
+            $firstOfMonth = Carbon::parse($date->firstOfMonth())->startOfDay();
+            $lastOfMonth = Carbon::parse($date->endOfMonth())->endOfDay();
+            $day = $lastOfMonth->format('d');
+        }
+        $timekeepings = $this->getDataTimekeeping($user->id, $day, $month, $s_year);
+
+        //vắng mặt có đăng kí
+        $absence_data = collect($timekeepings);
+        $absence_other = $absence_data->filter(function ($value, $key) use ($firstOfMonth, $lastOfMonth) {
+            return ($value['SDate'] != null && $value['EDate'] != null && $value['SDate'] > $firstOfMonth && $value['EDate'] < $lastOfMonth && $value['MasterDataValue'] != 'VM003' && $value['MasterDataValue'] != 'VM004');
+        })->all();
+        $t_other = array_sum(array_column($absence_other, 'TotalTimeOff'));
+        //kiểm tra đi muộn
+        $t_late = $t_soon = 0;
+        $absence_late = $absence_data->filter(function ($value, $key) use ($firstOfMonth, $lastOfMonth) {
+            return ($value['SDate'] != null && $value['EDate'] != null && $value['SDate'] > $firstOfMonth && $value['EDate'] < $lastOfMonth && $value['MasterDataValue'] == 'VM003');
+        })->all();
+        if (!empty($absence_late)) {
+            foreach ($absence_late as $item) {
+                if (Carbon::parse($item['Date'] . ' ' . $item['TimeIn'])->gte(Carbon::parse($item['EDate'])->addHours(7))) {
+                    $t_late += round(Carbon::parse($item['TimeIn'])->diffInSeconds(Carbon::parse($item['STimeOfDay'])) / 60, 2);
+                } else {
+                    $t_late += $item['TotalTimeOff'];
+                }
+            }
+        }
+        //kiểm tra về sớm
+        $absence_soon = $absence_data->filter(function ($value, $key) use ($firstOfMonth, $lastOfMonth) {
+            return ($value['SDate'] != null && $value['EDate'] != null && $value['SDate'] > $firstOfMonth && $value['EDate'] < $lastOfMonth && $value['MasterDataValue'] == 'VM004');
+        })->all();
+
+        if (!empty($absence_soon)) {
+            foreach ($absence_soon as $item) {
+                if ((Carbon::parse($item['SDate'])->addHours(7))->gte(Carbon::parse($item['Date'] . ' ' . $item['TimeOut']))) {
+                    $t_soon += round(Carbon::parse($item['ETimeOfDay'])->diffInSeconds(Carbon::parse($item['TimeOut'])) / 60, 2);
+                } else {
+                    $t_soon += $item['TotalTimeOff'];
+                }
+            }
+        }
+        $time = $t_other + $t_late + $t_soon;
+        $special_absence = Absence::query()
+            ->where('deleted_at', null)
+            ->where('UID', $user->id)
+            ->Where(function ($query) use ($lastOfMonth) {
+                $query->where('SDate', '<=', $lastOfMonth)
+                    ->where('EDate', '>', $lastOfMonth);
+            })
+            ->orWhere(function ($query) use ($firstOfMonth) {
+                $query->where('EDate', '<', $firstOfMonth)
+                    ->where('EDate', '>=', $firstOfMonth);
+            })
+            ->whereIn("MasterDataValue", self::TYPE_ABSENCE)
+            ->get();
+        $p_absence = $t_absence = 0;
+        if (!blank($special_absence)) {
+            foreach ($special_absence as $item) {
+                if (Carbon::parse($item->SDate)->month == $month && Carbon::parse($item->EDate)->month != $month && $item->UID == $user->id) {
+                    $p_absence = $this->getDiffHours(Carbon::parse($item->SDate)->addHours(7), Carbon::parse($lastOfMonth), $user->id);
+                }
+                if (Carbon::parse($item->EDate)->month == $month && Carbon::parse($item->SDate)->month != $month && $item->UID == $user->id) {
+                    $t_absence = $this->getDiffHours(Carbon::parse($firstOfMonth), Carbon::parse($item->EDate)->addHours(7), $user->id);
+                }
+            }
+        }
+        $t_time = round(($time / self::MINUS_PER_HOUR), 2) + $p_absence + $t_absence;
+        $data = Arr::add($data, 'registered', $t_time);
+        if ($month == $s_month) {
+            $data = Arr::add($data, 'absences_search_month', $t_time);
+        }
+
+        //không đăng kí
+        $no_timekeeping = $late_soon = 0;
+        foreach ($timekeepings as $item) {
+            if ($item->dayOfTheWeek != 0 && $item->dayOfTheWeek != 6 && blank($item->StartDate) && blank($item->EndDate)) {
+                if (blank($item->SDate) && blank($item->EDate)) {
+                    if ($item->TimeIn && $item->TimeOut) {
+                        // $demo = Arr::add($demo,$item->date_month, $item->dayOfTheWeek);
+                        if (Carbon::parse($item->TimeIn) > Carbon::parse($item->STimeOfDay) && Carbon::parse($item->TimeIn) < Carbon::parse($item->SBreakOfDay)) {
+                            $late_soon += round(Carbon::parse($item->TimeIn)->diffInSeconds(Carbon::parse($item->STimeOfDay)) / (60 * 60), 2);
+                        } else if (Carbon::parse($item->TimeIn) >= Carbon::parse($item->SBreakOfDay) && Carbon::parse($item->TimeIn) <= Carbon::parse($item->EBreakOfDay)) {
+                            $late_soon += round(Carbon::parse($item->SBreakOfDay)->diffInSeconds(Carbon::parse($item->STimeOfDay)) / (60 * 60), 2);
+                        } else if (Carbon::parse($item->TimeIn) > Carbon::parse($item->EBreakOfDay)) {
+                            $late_soon += round((Carbon::parse($item->SBreakOfDay)->diffInSeconds(Carbon::parse($item->STimeOfDay)) + Carbon::parse($item->TimeIn)->diffInSeconds(Carbon::parse($item->EBreakOfDay))) / (60 * 60), 2);
+                        }
+                        if (Carbon::parse($item->TimeOut) < Carbon::parse($item->ETimeOfDay) && Carbon::parse($item->TimeOut) > Carbon::parse($item->EBreakOfDay)) {
+                            $late_soon += round(Carbon::parse($item->ETimeOfDay)->diffInSeconds(Carbon::parse($item->TimeOut)) / (60 * 60), 2);
+                        } else if (Carbon::parse($item->TimeOut) >= Carbon::parse($item->SBreakOfDay) && Carbon::parse($item->TimeOut) <= Carbon::parse($item->EBreakOfDay)) {
+                            $late_soon += round(Carbon::parse($item->ETimeOfDay)->diffInSeconds(Carbon::parse($item->EBreakOfDay)) / (60 * 60), 2);
+                        } else if (Carbon::parse($item->TimeOut) < Carbon::parse($item->SBreakOfDay)) {
+                            $late_soon += round((Carbon::parse($item->ETimeOfDay)->diffInSeconds(Carbon::parse($item->EBreakOfDay)) + Carbon::parse($item->SBreakOfDay)->diffInSeconds(Carbon::parse($item->TimeOut))) / (60 * 60), 2);
+                        }
+                    }
+                    if (blank($item->TimeIn) || blank($item->TimeOut)) {
+                        if ((Carbon::parse($item->date_month) < Carbon::now()) && (Carbon::parse($item->date_month) > Carbon::parse($ODate))) {
+                            $no_timekeeping += 8;
+                        }
+                    }
+                }
+            }
+        }
+        $data = Arr::add($data, 'no_timekeeping', $no_timekeeping);
+        $data = Arr::add($data, 'late_soon', $late_soon);
+        return $data;
+    }
+
+    public function absence(Request $request)
+    {
+        $search_date = (null != $request['date'])
+            ? $request['date']
+            : Carbon::now();
+        $userid = (null != $request['UserID'])
+            ? $request['UserID']
+            : Auth::user()->id;
+        $s_month = date('m', strtotime($search_date));
+        $s_year = date('Y', strtotime($search_date));
+        $firstOfMonth = Carbon::parse(Carbon::parse($search_date)->firstOfMonth())->startOfDay();
+        $lastOfMonth = Carbon::parse(Carbon::parse($search_date))->endOfDay();
+        $this->data['absenceLeave'] = Absence::query()->select('absences.*', 'master_data.Name')
+            ->join('master_data', 'master_data.DataValue', 'absences.MasterDataValue')
+            ->where('UID', '=', $userid)
+            ->whereIn("absences.MasterDataValue", self::TYPE_ABSENCE)
+            ->Where(function ($query) use ($firstOfMonth, $lastOfMonth) {
+                $query->orWhereBetween('SDate', array($firstOfMonth, $lastOfMonth))
+                    ->orWhereBetween('EDate', array($firstOfMonth, $lastOfMonth));
+            })
+            ->orWhere(function ($query) use ($search_date) {
+                $query->where('SDate', '<=', Carbon::parse($search_date)->toDateString())
+                    ->where('EDate', '>=', Carbon::parse($search_date)->toDateString());
+            })
+            ->where('UID', '=', $userid)
+            ->get();
+        $absenceLeave = $this->data['absenceLeave'];
+        foreach ($absenceLeave as $absence) {
+            $absence->SDate = Carbon::parse($absence->SDate)->format('d/m/Y H:i:s');
+            $absence->EDate = Carbon::parse($absence->EDate)->format('d/m/Y H:i:s');
+            $absence->TotalTimeOff = round(($absence->TotalTimeOff / self::MINUS_PER_HOUR), 2);
+            // $timekeeping_data = TimekeepingNew::query()
+            //     ->whereYear('Date', $s_year)
+            //     ->whereMonth('Date', '<=', $s_month)
+            //     ->where('UserID', $userid)
+            //     ->where('Date', Carbon::parse($absence->SDate)->toDateString())
+            //     ->first();
+            $absence->errorReport = false;
+            // if ($absence->MasterDataValue == 'VM003' && $timekeeping_data->TimeIn && $timekeeping_data->TimeOut) {
+            //     if (Carbon::parse($timekeeping_data->Date . ' ' . $timekeeping_data->TimeIn)->gte(Carbon::parse($absence->EDate)->addHours(7))) {
+            //         $absence->errorReport = true;
+            //     }
+            // }
+            // if ($absence->MasterDataValue == 'VM004' && $timekeeping_data->TimeIn && $timekeeping_data->TimeOut) {
+            //     if ((Carbon::parse($timekeeping_data->Date . ' ' . $timekeeping_data->TimeOut))->lte(Carbon::parse($absence->SDate)->addHours(7))) {
+            //         $absence->errorReport = true;
+            //     }
+            // }
+        }
+        return view("leave::includes.absence-detail", $this->data);
+    }
+
+    public function getUnregisteredList(Request $request)
+    {
+        $search_date = (null != $request['date']) ? Carbon::createFromDate($request->date) : Carbon::now();
+        $UserID = (null != $request['UserID']) ? $request['UserID'] : Auth::user()->id;
+        $day = Carbon::parse($search_date)->format('d');
+        $month = Carbon::parse($search_date)->format('m');
+        $year = Carbon::parse($search_date)->format('Y');
+        $timekeepings = $this->getDataTimekeeping($UserID, $day, $month, $year);
+        foreach ($timekeepings as $item) {
+            if ($item->dayOfTheWeek != 0 && $item->dayOfTheWeek != 6 && blank($item->StartDate) && blank($item->EndDate)) {
+                if (!$item->SDate && (is_null($item->TimeIn) || is_null($item->TimeOut)) && (Carbon::parse($item->Date) < Carbon::now())) {
+                    $item->no_timekeeping = 8;
+                }
+                if (!$item->SDate && !is_null($item->TimeIn) && !is_null($item->TimeOut)) {
+                    if (Carbon::parse($item->TimeIn) > Carbon::parse($item->STimeOfDay)) {
+                        $item->late = round(Carbon::parse($item->TimeIn)->diffInSeconds(Carbon::parse($item->STimeOfDay)) / (60 * 60), 2);
+                    }
+
+                    if ($item->TimeOut != Null && Carbon::parse($item->TimeOut) < Carbon::parse($item->ETimeOfDay)) {
+                        $item->soon = round(Carbon::parse($item->TimeOut)->diffInSeconds(Carbon::parse($item->ETimeOfDay)) / (60 * 60), 2);
+                    }
+                }
+            }
+        }
+        $this->data['timekeepings'] = $timekeepings;
+        $this->data['TypeSelect'] = (null != $request['TypeSelect']) ? $request['TypeSelect'] : 1;
+        return view("leave::includes.late-soon-detail", $this->data);
+    }
+
+    public function getDataTimekeeping($userId, $day, $month, $year)
+    {
+        $data = TimeKeepingAllDay::query()
+            ->select(
+                'timekeepings_all_day.id as day_month',
+                'calendar_events.StartDate',
+                'calendar_events.EndDate',
+                'absences.SDate',
+                'absences.EDate',
+                'absences.TotalTimeOff',
+                'absences.MasterDataValue',
+                'timekeepings_new.Date',
+                'timekeepings_new.TimeIn',
+                'timekeepings_new.TimeOut',
+                'timekeepings_new.STimeOfDay',
+                'timekeepings_new.ETimeOfDay',
+                'timekeepings_new.SBreakOfDay',
+                'timekeepings_new.EBreakOfDay',
+            )
+            ->leftJoin('timekeepings_new', function ($q) use ($userId, $month, $year) {
+                $q->on('timekeepings_all_day.id', 'timekeepings_new.Day')
+                    ->whereMonth('timekeepings_new.Date', $month)
+                    ->whereYear('timekeepings_new.Date', $year)
+                    ->where('timekeepings_new.UserID', $userId);
+            })
+            ->leftJoin('calendar_events', function ($q) use ($month, $year) {
+                $q->on(function ($on) use ($month, $year) {
+                    $on->whereMonth('calendar_events.StartDate', $month)
+                        ->whereMonth('calendar_events.EndDate', $month)
+                        ->where(function ($query) use ($year) {
+                            $query->where(function ($q) use ($year) {
+                                $q->whereRaw('Day(calendar_events.StartDate) >= timekeepings_all_day.id')
+                                    ->orWhereRaw('Day(calendar_events.EndDate) >= timekeepings_all_day.id')
+                                    ->where('calendar_events.CalendarId', 1)
+                                    ->whereYear('calendar_events.StartDate', $year);
+                            });
+                        })
+                        ->whereYear('calendar_events.StartDate', $year)
+                        ->where('calendar_events.CalendarId', 1);
+                })
+                    ->orWhere(function ($or) use ($month) {
+                        $or->whereRaw('Month(calendar_events.StartDate) < Month(calendar_events.EndDate)')
+                            ->where(function ($query) use ($month) {
+                                $query->where(function ($q) use ($month) {
+                                    $q->whereMonth('calendar_events.StartDate', '<', $month)
+                                        ->whereMonth('calendar_events.EndDate', $month)
+                                        ->whereRaw('Day(calendar_events.EndDate) >= timekeepings_all_day.id')
+                                        ->where('calendar_events.CalendarId', 1);
+                                })
+                                    ->orWhere(function ($q) use ($month) {
+                                        $q->whereMonth('calendar_events.StartDate', $month)
+                                            ->whereMonth('calendar_events.EndDate', '>', $month)
+                                            ->where('calendar_events.CalendarId', 1)
+                                            ->whereRaw('Day(calendar_events.StartDate) <= timekeepings_all_day.id');
+                                    });
+                            });
+                    })
+                    ->whereYear('calendar_events.StartDate', $year)
+                    ->where(function ($query) use ($month) {
+                        $query->where(function ($qr) use ($month) {
+                            $qr->whereMonth('calendar_events.StartDate', '<', $month)
+                                ->whereMonth('calendar_events.EndDate', $month);
+                        })
+                            ->orWhere(function ($qr) use ($month) {
+                                $qr->whereMonth('calendar_events.StartDate', $month)
+                                    ->whereMonth('calendar_events.EndDate', '>', $month);
+                            });
+                    });
+            })
+            ->leftJoin('absences', function ($q) use ($userId, $month, $year) {
+                $q->on(function ($on) use ($userId, $month, $year) {
+                    $on->whereMonth('absences.SDate', $month)
+                        ->whereMonth('absences.EDate', $month)
+                        ->whereRaw('Day(absences.SDate) = timekeepings_all_day.id')
+                        ->whereYear('absences.SDate', $year)
+                        ->where('absences.UID', $userId)
+                        ->whereIn('absences.MasterDataValue', self::TYPE_ABSENCE);
+                })
+                    ->orWhere(function ($or) use ($userId, $month, $year) {
+                        $or->whereMonth('absences.SDate', $month)
+                            ->whereMonth('absences.SDate', '<', 'absences.EDate')
+                            ->where('absences.UID', $userId)
+                            ->where(function ($query) use ($month) {
+                                $query->where(function ($qr) use ($month) {
+                                    $qr->whereMonth('absences.SDate', '<', $month)
+                                        ->whereMonth('absences.EDate', $month)
+                                        ->whereDay('absences.SDate', '>=', 'timekeepings_all_day.id');
+                                })
+                                    ->orWhere(function ($qr) use ($month) {
+                                        $qr->whereMonth('absences.SDate', '<', $month)
+                                            ->whereMonth('absences.EDate', $month)
+                                            ->whereDay('absences.EDate', '<=', 'timekeepings_all_day.id');
+                                    });
+                            })
+                            ->whereIn('absences.MasterDataValue', self::TYPE_ABSENCE);
+                    })
+                    ->where('absences.UID', $userId)
+                    ->whereYear('absences.SDate', $year)
+                    ->where(function ($query) use ($month) {
+                        $query->where(function ($qr) use ($month) {
+                            $qr->whereMonth('absences.SDate', '<', $month)
+                                ->whereMonth('absences.EDate', $month);
+                        })
+                            ->orWhere(function ($qr) use ($month) {
+                                $qr->whereMonth('absences.SDate', '<', $month)
+                                    ->whereMonth('absences.EDate', $month);
+                            });
+                    })
+                    ->whereIn('absences.MasterDataValue', self::TYPE_ABSENCE);
+            })
+            ->where('timekeepings_all_day.id', '<=', $day)
+            ->orderBy('timekeepings_all_day.id', 'asc')->get();
+        foreach ($data as $item) {
+            $item->date_month = $year . '-' . $month . '-' . $item->day_month;
+            $item->dayOfTheWeek = Carbon::parse($item->date_month)->dayOfWeek;
+        }
+        return $data;
+    }
+}

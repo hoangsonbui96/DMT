@@ -1,0 +1,258 @@
+@extends('admin.layouts.default.app')
+
+@section('content')
+    <style>
+        .tbl-top {
+            margin-top: 20px;
+        }
+
+        .table.table-bordered th,
+        .table.table-bordered td {
+            border: 1px solid #bdb9b9 !important;
+            vertical-align: middle !important;
+            background-color: #fff;
+        }
+
+        .table-scroll table {
+            min-width: 1260px !important;
+        }
+
+        .td-hover {
+            text-align: center;
+            cursor: pointer;
+        }
+
+        tr .td-hover:hover {
+            background-color: #c6e2ff;
+        }
+        .modal .box{
+            margin-bottom: 0px !important;
+        }
+    </style>
+    <section class="content-header">
+        <h1 class="page-header">Ngày nghỉ phép</h1>
+    </section>
+    <section class="content">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <form class="form-inline" method="get" id="leave-search-form">
+                    <div class="form-group pull-left margin-r-5" id="cmbSelectUser">
+                        <div class="btn-group bootstrap-select show-tick show-menu-arrow user-custom"
+                            id="action-select-user">
+                            <select class="selectpicker show-tick show-menu-arrow user-custom" id="select-user"
+                                name="users_search[]" data-live-search="true" data-live-search-placeholder="Search"
+                                data-size="5" data-actions-box="true" multiple>
+                                {!! GenHtmlOption(
+                                    $users,
+                                    'id',
+                                    'FullName',
+                                    request()->get('users_search') ? request()->get('users_search') : null,
+                                ) !!}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group pull-left margin-r-5 date" id="date">
+                        <div class="input-group search date">
+                            <input type="text" class="form-control" id="date-input" name="date"
+                                value="{{ request()->get('date') ? request()->get('date') : Carbon\Carbon::now()->format(FOMAT_DISPLAY_DAY) }}">
+                            <span class="input-group-addon">
+                                <span class="glyphicon glyphicon-calendar"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-group pull-left">
+                        <a class="btn btn-primary" id="btn-search-leave">
+                            @lang('admin.btnSearch')
+                        </a>
+                    </div>
+                    <div class="form-group pull-right">
+                        @can('action', $export)
+                            <a class="btn btn-success" id="export-leave">
+                                @lang('admin.export-excel')
+                            </a>
+                        @endcan
+                    </div>
+                </form>
+            </div>
+
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="tbl-top">
+                    <div class="table-responsive no-padding table-scroll">
+                        <table class="table table-bordered table-striped" name="leave-table" style="margin-bottom: 0;">
+                            <thead class="thead-default">
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Họ và tên</th>
+                                    <th>Ngày bắt đầu <br> vào làm</th>
+                                    <th>Ngày ký HĐ<br>Chính thức</th>
+                                    <th>Nghỉ phép<br>năm trước (h)</th>
+                                    <th>Nghỉ phép<br>hiện tại (h)</th>
+                                    <th>Ngày nghỉ phép<br>(đã đăng ký)(h)</th>
+                                    <th>Ngày nghỉ phép<br>(không đăng ký)(h)</th>
+                                    <th>Không chấm công (h)</th>
+                                    <th>Nghỉ phép<br>còn lại (h)</th>
+                                    {{-- <th>Thao tác</th> --}}
+                                </tr>
+                            </thead>
+                            <tbody id="ShowDataLoad">
+                                @php $temp = 0 @endphp
+                                @foreach ($users_leave as $user)
+                                    @php
+                                        $temp++;
+                                    @endphp
+                                    <tr>
+                                        <td class="text-center">{{ $temp }}</td>
+                                        <td>{{ $user->FullName }}</td>
+                                        {{-- ngày bắt đầu vào làm --}}
+                                        <td class="text-center">
+                                            {{ isset($user->SDate) ? FomatDateDisplay($user->SDate, FOMAT_DISPLAY_DAY) : '' }}
+                                        </td>
+                                        {{-- ngày ký hđ --}}
+                                        <td class="text-center office-date" Office-date={{$user->OfficialDate}}>
+                                            {{ isset($user->OfficialDate) ? FomatDateDisplay($user->OfficialDate, FOMAT_DISPLAY_DAY) : '' }}
+                                        </td>
+                                        {{-- số ngày nghỉ còn lại của năm trc --}}
+                                        <td class="text-center">
+                                            {{ $user->last_year_before != 0 ? number_format($user->last_year_before, 2) : 0 }} <br>
+                                        </td>
+                                        {{-- số ngày nghỉ có được trong năm tính đến thời điểm hiện tại --}}
+                                        <td class="text-center">
+                                            {{ $user->this_year_before != 0 ? number_format($user->this_year_before, 2) : 0 }}
+                                        </td>
+                                        {{-- số ngày phép đã đăng ký --}}
+                                        <td class="td-hover absence under-line" style="position: relative" UserID="{{ $user->id }}">
+                                            {{ $user->AbsenceSearchMonth != 0 ? number_format($user->AbsenceSearchMonth, 2) : 0 }}
+                                        </td>
+                                        {{-- số ngày phép ko đăng ký --}}
+                                        <td class="td-hover {{ $user->late_soon != 0 ? 'late-soon under-line' : '' }}" style="position: relative" UserID="{{ $user->id }}"> 
+                                            {{ $user->late_soon != 0 ? number_format($user->late_soon, 2) : 0 }}
+                                        </td>
+                                        {{-- số tgian ko chấm công --}}
+                                        <td class="td-hover nokeeping under-line" UserID="{{ $user->id }}" > 
+                                            {{ $user->no_timekeeping != 0 ? number_format($user->no_timekeeping, 2) : 0 }}
+                                        </td>
+                                        {{-- nghỉ phép còn lại --}}
+                                        <td>
+                                            năm trước: 
+                                            {{ $user->last_year_after != 0 ? number_format($user->last_year_after, 2) : 0 }} 
+                                            <br>
+                                            hiện tại: 
+                                            {{ $user->this_year_after != 0 ? number_format($user->this_year_after, 2) : 0 }}
+                                            <br>
+                                            vượt quá: 
+                                            {{ $user->beyond_time != 0 ? number_format($user->beyond_time, 2) : 0 }}
+                                        </td>
+                                        {{-- thao tác --}}
+                                        {{-- <td class="text-center">
+                                            @can('action', $lock)
+                                                <a class="btn btn-success" id="">Chốt</a>
+                                            @endcan
+                                        </td> --}}
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+@endsection
+
+@section('js')
+    <script type="text/javascript" defer>
+        $(".selectpicker").selectpicker({
+            noneSelectedText: 'Chọn nhân viên'
+        });
+        SetDatePicker($('.date'));
+    </script>
+    <script>
+        var urlSearchLeave = "{{ route('admin.Leave') }}";
+        $(function() {
+            $("#btn-search-leave").click(function() {
+                $('.loadajax').show();
+                let data = $('#leave-search-form').serialize();
+                //console.log(data + "test");
+                ajaxGetServerWithLoader(urlSearchLeave, "GET", data, function(rst) {
+                    $('.loadajax').hide();
+                    $('#ShowDataLoad').html(rst);
+                }, function() {
+                    alert('lỗi');
+                });
+            });
+        });
+    </script>
+    <script>
+        var Title = 'Lý do vắng mặt';
+        var title_late_soon = 'Đi muộn - Về sớm không đăng kí';
+        var title_nokeeping = 'Không chấm công';
+
+		$('.absence').click(function() {
+            $('.loadajax').show();
+			var dateTr = $("#date-input").val();
+			var date = dateTr.split("/").reverse().join("-");
+			var UserID = $(this).attr('UserID');
+            var OfficeDate = $('.office-date').attr('Office-date');
+            var Type = 1;
+            console.log(UserID);
+
+			ajaxGetServerWithLoader('{{route('admin.leaveAbsence')}}', 'POST', {
+				date: date,
+				UserID: UserID,
+                OfficeDate: OfficeDate,
+                Type: Type,
+			}, function (data) {
+                $('.loadajax').hide();
+				$('#popupModal').empty().html(data);
+				$('.modal-title').html(Title);
+				$('#modal-absence-list').modal('show');
+			});
+		});
+
+
+        $('.late-soon').click(function() {
+        $('.loadajax').show();
+        var dateTr = $("#date-input").val();
+        var date = dateTr.split("/").reverse().join("-");
+        var UserID = $(this).attr('UserID');
+        var OfficeDate = $('.office-date').attr('Office-date');
+
+        ajaxGetServerWithLoader('{{route('admin.leave.unregistered_list')}}', 'POST', {
+            date: date,
+            UserID: UserID,
+            TypeSelect: 2,
+            OfficeDate: OfficeDate,
+            Type : 1,
+        }, function (data) {
+                $('.loadajax').hide();
+                $('#popupModal').empty().html(data);
+                $('.modal-title').html(title_late_soon);
+                $('#modal-late-soon-list').modal('show');
+            });
+        });
+
+        $('.nokeeping').click(function() {
+            //$('.loadajax').show();
+            var dateTr = $("#date-input").val();
+            var date = dateTr.split("/").reverse().join("-");
+            var UserID = $(this).attr('UserID');
+            var OfficeDate = $('.office-date').attr('Office-date'); 
+            var Type = 1;
+            console.log(OfficeDate);
+            ajaxGetServerWithLoader('{{route('admin.leave.notimekeeping_list')}}', 'POST', {
+            date: date,
+            UserID: UserID,
+            OfficeDate: OfficeDate,
+            Type: Type,
+            }, function (data) {
+                    $('.loadajax').hide();
+                    $('#popupModal').empty().html(data);
+                    $('.modal-title').html(title_nokeeping);
+                    $('#modal-no-keeping-list').modal('show');
+            });
+            
+        });
+    </script>
+@endsection

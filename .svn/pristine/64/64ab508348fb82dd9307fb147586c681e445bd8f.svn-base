@@ -1,0 +1,72 @@
+<div class="modal fade" id="modal-late-soon-list">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="modal-date"></h4>
+            </div>
+            <div class="modal-body">
+                <div class="box">
+                    <div class="box-body table-responsive no-padding">
+                        <table class="table table-bordered table-hover" id="tbl-absent">
+                            <thead class="thead-default">
+                                <tr>
+                                    <th scope="col">@lang('admin.stt')</th>
+                                    <th>ID</th>
+                                    <th scope="col">Ngày</th>
+                                    <th scope="col">Giờ vào</th>
+                                    <th scope="col">Giờ ra</th>
+                                    {{-- @if ($TypeSelect == 1) --}}
+                                        {{-- <th scope="col">Thời gian (h)</th> --}}
+                                    {{-- @else --}}
+                                        <th scope="col">Đi muộn (h)</th>
+                                        <th scope="col">Về sớm (h)</th>
+                                    {{-- @endif --}}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $temp = 0; @endphp
+                                @foreach ($filterToGetSoonLateTime as $item)
+                                    {{-- @if ($TypeSelect == 1 && !empty($item->no_timekeeping) && $item->check_event == false)
+                                        @php $temp++; @endphp
+                                        <tr class="text-center">
+                                            <td>{{ $temp }}</td>
+                                            <td>{{ isset($item->date_month) ? FomatDateDisplay($item->date_month, FOMAT_DISPLAY_DAY) : '' }}
+                                            </td>
+                                            <td class="">{{ $item->TimeIn }}</td>
+                                            <td class="">{{ $item->TimeOut }}</td>
+                                            <td class="">{{ $item->no_timekeeping }}</td>
+                                        </tr> --}}
+                                    {{-- trường hợp đi muộn về sớm --}}
+                                    {{-- @elseif ($TypeSelect == 2 && !empty($item->late || $item->soon)) --}}
+                                        @php $temp++; @endphp
+                                        <tr class="text-center">
+                                            <td>{{ $temp }}</td>
+                                            <td>{{ $item->UserID }}</td>
+                                            <td>{{ isset($item->Date) ? FomatDateDisplay($item->Date, FOMAT_DISPLAY_DAY) : '' }}</td>                                                                                
+                                            <td class="">{{ $item->TimeIn }}</td>
+                                            <td class="">{{ $item->TimeOut }}</td>                                                          
+                                            @if( isset($item->late) && isset($item->soon))
+                                                <td>{{ $item->late }}</td>
+                                                <td>{{ $item->soon }}</td>
+                                            @elseif (isset($item->late))
+                                                <td>{{ $item->late }}</td>
+                                                <td></td>
+                                            @elseif (isset($item->soon))
+                                                <td></td>
+                                                <td>{{ $item->soon }}</td>
+                                            @endif                                    
+                                        </tr>
+                                    {{-- @endif --}}
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">@lang('admin.btnCancel')</button>
+            </div>
+        </div>
+    </div>
+</div>

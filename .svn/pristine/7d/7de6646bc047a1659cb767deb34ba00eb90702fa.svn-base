@@ -1,0 +1,36 @@
+.datetime_txtBox{width: 180px}
+.hidden{ visibility: hidden; }
+.ele-info { line-height: 34px; }
+.title-tbl { margin-top: 7px; float: left; }
+.export-excel { float: left; margin-right: 10px; }
+sup { color: red; font-weight: bold; }
+
+.fa-stack[data-count]:after{ position:absolute;	right:-15%; top:-20%; content: attr(data-count); font-size:65%; padding:.6em; border-radius:999px; line-height:.75em; color: white; background:rgba(255,0,0,1); text-align:center; min-width:2em; }
+
+
+/*.search-time, .list-overtime .select-user, .list-overtime .select-project{ width: 150px; float: left; margin-right: 10px; margin-bottom: 10px}*/
+.search-time, .history-overtime .select-user, .history-overtime .select-project, .search-time, .list-overtime .select-user, .list-overtime .select-project, #btn-view-by-user{float: left; margin-right: 10px; margin-bottom: 10px}
+.search-time{width: 140px;}
+#overtimeWork-info input.has-error, input.has-error{border: 1px solid #f40b0b;background: #f8fea5}
+/*#dataTables-history{}*/
+#dataTables-history thead tr th:nth-child(2),
+#dataTables-history tbody tr td:nth-child(2) { width: 150px !important; }
+
+#dataTables-history thead tr th:first-child,
+#dataTables-history tbody tr td:first-child,
+#dataTables-history thead tr th:nth-child(6),
+#dataTables-history tbody tr td:nth-child(6),
+#dataTables-history thead tr th:nth-child(7),
+#dataTables-history tbody tr td:nth-child(7){text-align: center; width: 70px !important; }
+
+#dataTables-history thead tr th:nth-child(4),
+#dataTables-history tbody tr td:nth-child(4) { width: 130px !important; }
+#dataTables-history thead tr th:nth-child(5),
+#dataTables-history tbody tr td:nth-child(5) { width: 130px !important; }
+#dataTables-history thead tr th:nth-child(9),
+#dataTables-history tbody tr td:nth-child(9) { max-width: 300px !important; min-width: 200px !important;}
+#dataTables-history thead tr th:nth-child(10),
+#dataTables-history tbody tr td:nth-child(10) { width: 130px !important; }
+#dataTables-history thead tr th:nth-child(11),
+#dataTables-history tbody tr td:nth-child(11) {text-align: center; width: 130px !important; }
+#dataTables-history tbody tr td, #dataTables-history thead tr th{vertical-align: middle}

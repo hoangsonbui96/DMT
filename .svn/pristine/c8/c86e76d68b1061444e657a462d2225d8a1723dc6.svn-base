@@ -1,0 +1,164 @@
+body{font-family:sans-serif,'Times New Roman',Arial;/*overflow-x: hidden;*/}
+.clear{clear: both;}
+
+/*ACOUNT*/
+.acount{}
+
+/*Header*/
+.header {padding-top:20px;padding-bottom:10px;text-align: center}
+.header .date-now{text-align: right;}
+.header h1{font-size: 34px;font-weight: bold;color:#bb3a01 !important}
+.header h1{ text-transform: uppercase; margin:0;}
+.header h2{font-weight: bold;color: #21263a;margin-top: 1px;letter-spacing: 2px;}
+.hr{ height: 2px; width: 80%;background: #d8dfe5; margin-top: 0;margin-left: 10%}
+
+/*Content*/
+/*.bootstrap-select.btn-group .dropdown-menu{max-height: 250px !important;}
+*/.navbar-default{border-color: #fff;}
+.navbar-default .navbar-nav>li>a{color: #141a18}
+
+.content {margin-top: 35px}
+.year .select-year .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){width: 80px}
+.print .type-print .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn)/*,.year .select-calendar .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn)*/{width: 140px}
+.year .select-calendar .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){padding-right: 8px}
+.bootstrap-select.btn-group .dropdown-menu{border: solid 1px #ddd}
+
+.btn-expand{padding-top: 15px}
+
+.year{display: inline-flex}
+.year .select-year .btn-default,.print .type-print .btn-default,.year .select-calendar .btn-default{border-color: #c6e2ff}
+.year .year-title span#year{color: #bb3a01 !important; font-size: 30px; font-weight: bold;}
+.print{margin-top: 7px;margin-right: 10px}
+.print .type-print{float: left;padding-right: 15px;}
+.thang tbody tr{height: 45px !important}
+.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th{padding: 5px}
+.thang tbody tr td{position: relative;}
+.am{position: absolute;bottom: 5px; right: 20%;color: blue  !important}
+.thang tbody tr td.empty,.thang tbody tr td.ngaytuan{background: #f0f8ff !important; color:#141a18}
+
+.thang tbody tr td.notempty{padding-top: 1px; background: #fff;-webkit-transition: all .2s; /* For Safari 3.1 to 6.0 */ transition:  all .2s}
+.thang tbody tr td.sat > .sdate,.thang tbody tr td.sun > .sdate{color: red !important;}
+.thang tbody tr td.sat,.thang tbody tr td.sun{background:#fdf2fd !important;}
+.thang tbody tr td.notempty:hover{cursor: pointer; background: #40b0b5 !important; color: #fff !important;}
+.thang tbody tr td.notempty:hover > .sdate {color: #fff !important;}
+.thang tbody tr td.notempty:hover .t7,.thang tbody tr td.notempty:hover .cn{ color: #fff !important;}
+.thang tbody tr td.tet,.thang tbody tr td.homnay {background: #40b0b5 !important;font-weight: bold;}
+.thang tbody tr td.tet > .sdate,.thang tbody tr td.homnay > .sdate,.thang tbody tr td.homnay > .am,.thang tbody tr td.tet > .am{ color: #fff !important;-webkit-print-color-adjust: exact; color-adjust: exact;}
+.thang tbody tr th{height: 40px !important;background-color: #c6e2ff !important; font-size: 150%;color: #141a18;border: 1px solid #c6e2ff !important;-webkit-print-color-adjust: exact; color-adjust: exact;}
+.thang tbody tr td{background: #fff;border: 1px solid #c6e2ff !important; height: 30px !important}
+.thang tbody tr td.nghi{background: #FFFF00 !important}
+.thang tbody tr td.lambu{background: #9ef7cb !important}
+.thang tbody tr td.nghikhac{background: #0dd0fc}
+.thang tbody tr td.nghiKBS{background: #cffcf5 !important}
+.thang tbody tr td.nghi.tet > .sdate,.thang tbody tr td.nghi.tet > .am, .thang tbody tr td.nghi.homnay > .sdate,.thang tbody tr td.nghi.homnay > .am{color: red !important}
+.thang tbody tr td.lambu.tet > .sdate,.thang tbody tr td.lambu.tet > .am, .thang tbody tr td.lambu.homnay > .sdate,.thang tbody tr td.lambu.homnay > .am{color: red !important}
+.thang tbody tr td.nghikhac.tet > .sdate,.thang tbody tr td.nghikhac.tet > .am, .thang tbody tr td.nghikhac.homnay > .sdate,.thang tbody tr td.nghikhac.homnay > .am{color: red !important}
+.thang tbody tr td.nghiKBS.tet > .sdate,.thang tbody tr td.nghiKBS.tet > .am, .thang tbody tr td.nghiKBS.homnay > .sdate,.thang tbody tr td.nghiKBS.homnay > .am{color: red !important}
+span.birthday{position: absolute;bottom: 3px; left: 6px ;color: red !important;font-size: 75%}
+.form-inline .input-group>.form-control{height: 100%}
+/*MODAL*/
+.select-date{margin-bottom: 15px;}
+.form-inline .control-label {margin-right: 3px}
+#myModal #jaColor{width: 140px; padding-left: 10px}
+#myModal .panel-body{padding: 0 15px;}
+
+/*Tooltip*/
+.tooltip-inner{word-wrap: break-word !important;text-align: left;}
+
+textarea {
+    resize: none;
+}
+
+
+/*MOBILE*/
+/* Cho các thiết bị có kích thước có kích thước < 1080px */
+@media screen and (max-width: 1080px){
+	.thang tbody tr td{font-size: 11px}
+}
+
+/* Cho các thiết bị có kích thước có kích thước < 768px */
+@media screen and (max-width: 768px){
+	.header{text-align: left;}
+	.header .title{text-align: center;}
+	.header h1{font-size: 21px}
+	.header h2{font-size: 19px}
+	.header .year{text-align: left;}
+
+	#myModal #jaColor{margin:10px 0 10px 10px}
+
+	.print label{display: none;}
+	.print .type-print .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn){width: 140px}
+
+}
+
+/* Cho các thiết bị có kích thước có kích thước >768px */
+@media screen and (min-width: 768px){
+	#sDate,#eDate{width: 150px}
+
+	/*MODAL*/
+
+	#eDate-form{padding-left: 10px}
+
+}
+
+@media screen{
+
+}
+@media print {
+	.btn-expand,.acount{display: none}
+	span.birthday{display:none}
+	body {-webkit-print-color-adjust: exact;}
+	#container{width: 1200px;}
+	#month-of-year{width: 1500px !important;}
+	.content .col-xs-1, .col-xs-10, .col-xs-11, .col-xs-12, .col-xs-2, .col-xs-3, .col-xs-4, .col-xs-5, .col-xs-6, .col-xs-7, .col-xs-8, .col-xs-9{width: 25%}
+	.thang tbody tr td.homnay {background: #fff !important;font-weight: normal;}
+	.thang tbody tr td.homnay > .sdate{color: #000 !important}
+	.thang tbody tr td.homnay > .am{color: blue !important}
+	/*Detail Data*/
+	.print-detail-data{font-size: 16px !important;}
+	.print-detail-data > p,.print-detail-data table tbody tr td.date span,.single-month > p {font-weight: bold}
+	.print-detail-data > p {font-size: 150%}
+	.print-detail-data table tbody tr td.date span, .single-month table tbody tr td.date span{font-style: italic;}
+	.print-detail-data table tbody tr td.date,.single-month table tbody tr td.date{width: 195px}
+	.print-detail-data .table>thead:first-child>tr:first-child>th{text-align: center;}
+	.print-detail-data .table-bordered>tbody>tr>td{border: 2px solid #ddd !important;}
+	.thang tbody tr td,.thang tbody tr th{border: 2px solid #c6e2ff !important;}
+	#month-of-year > .single-month{ page-break-after: always;}
+	#month-of-year > .single-month .title{margin-top:5px !important}
+	.single-month,.single-month .thang{font-size: 20px !important;}
+	.single-month .header .hr{margin-bottom: 20px;}
+	.single-month .thang tbody tr{height: 65px !important;}
+	.single-month .thang tbody tr td.ngaytuan{padding-top: 33px !important; text-align: center;}
+	.single-month .thang tbody tr th{text-align: center;}
+	.single-month .thang tbody tr td > .t2t6,.single-month .thang tbody tr td > .t7,.single-month .thang tbody tr td > .cn{font-size: 130% !important;}
+	.single-month table tbody tr td.date{width: 254px}
+	.single-month .table-bordered>thead>tr>th{ text-align: center;}
+	.single-month .thang tbody tr td,.single-month .thang tbody tr th{border: 2px solid #c6e2ff !important;}
+	.single-month .detail_data .table-bordered>tbody>tr>td,.single-month .detail_data .table-bordered>tbody>tr>th,.single-month .detail_data .table-bordered>tfoot>tr>td,.single-month .detail_data .table-bordered>tfoot>tr>th,.single-month .detail_data .table-bordered>thead>tr>td,.single-month .detail_data .table-bordered>thead>tr>th{border: 2px solid #ddd !important;}
+	.header{position: relative;}
+	.content {margin-top: 20px}
+
+/*	.thang tbody tr th{
+		background-color: #c6c6c6 !important;
+	}
+	.thang tbody tr td.empty, .thang tbody tr td.ngaytuan{
+	    background: #e3e3e3 !important;
+	}
+	.thang tbody tr td.nghi{
+		background: #9c9c9c !important;
+
+	}
+	.thang tbody tr td.sat, .thang tbody tr td.sun{
+	    background: #eeeeee!important;
+	}
+	.thang tbody tr td,.thang tbody tr th{
+	   border: 2px solid #dddddd !important;
+	}
+	.header h1,.thang tbody tr td.sat > .sdate, .thang tbody tr td.sun > .sdate,.am,.thang tbody tr td.nghi.tet > .sdate, .thang tbody tr td.nghi.tet > .am, .thang tbody tr td.nghi.homnay > .sdate, .thang tbody tr td.nghi.homnay > .am{color: #000 !important}
+*/
+	@page {
+	    size: A3 Portrait;
+	    margin: Default;
+	}
+
+}

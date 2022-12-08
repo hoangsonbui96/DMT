@@ -1,0 +1,202 @@
+<?php
+
+
+namespace App\Http\Services\Timekeeping;
+
+
+use App\CalendarEvent;
+use App\MasterData;
+use App\Model\Absence;
+use App\Model\CheckinHistory;
+use App\User;
+use Carbon\Carbon;
+
+class TimekeepingSchedulerService
+{
+
+    private function _diffMin($min1, $min2): int
+    {
+        return Carbon::parse($min1)->diffInMinutes(Carbon::parse($min2));
+    }
+
+    private function _diffSeconds($min1, $min2): int
+    {
+        return Carbon::parse($min1)->diffInSeconds(Carbon::parse($min2));
+    }
+
+    private function _convertToHours($min): float
+    {
+        return round($min / 60, 2);
+    }
+
+
+    public function getData($users_search, $date)
+    {
+        $date = $date->format("Y-m-d");
+        $users = User::query()
+            ->select("id", "FullName")
+            ->where('deleted', '!=', 1)
+            ->where('role_group', '!=', 1)
+            ->where('Active', 1)
+            ->whereIn("id", $users_search)
+            ->with(["timekeepings" => function ($q) use ($date) {
+                $q->where("Date", $date);
+            }])
+            ->orderBy("FullName")
+            ->get();
+
+        $master = MasterData::query()->whereIn("DataValue", ["WT001", "WT002"])->get();
+        $master1 = $master[0];
+        $master2 = $master[1];
+        $time_in_am = $master1 ? $master1->Name : '08:30';
+        $time_in_pm = $master2 ? $master2->DataDescription : '13:00';
+        $time_out_am = $master2 ? $master2->Name : '12:00';
+        $time_out_pm = $master1 ? $master1->DataDescription : '17:30';
+        $totalTimeWork = $this->_convertToHours($this->_diffMin($time_in_am, $time_out_am) + $this->_diffMin($time_in_pm, $time_out_pm));
+        $users->totalKeeping = 0;
+        $users->overKeeping = 0;
+        $users->lateTimes = 0;
+        $users->lateHours = 0;
+        $users->soonTimes = 0;
+        $users->soonHours = 0;
+        $users->checkinAtCompany = 0;
+        $users->checkinAtHome = 0;
+
+        foreach ($users as $user) {
+            if ($user->timekeeings == null) {
+                $user->timekeepings->push(new \stdClass());
+            }
+            $item = $user->timekeepings->first();
+            $item->absence = Absence::query()
+                ->select('absences.*', 'master_data.Name')
+                ->join('master_data', 'master_data.DataValue', 'absences.MasterDataValue')
+                ->where('UID', $user->id)
+                ->where('SDate', '<=', Carbon::parse($date)->endOfDay())
+                ->where('EDate', '>=', Carbon::parse($date)->startOfDay())
+                ->get();
+            foreach ($item->absence as $absence) {
+                if (!isset($item->Date)) {
+                    break;
+                }
+                if (Carbon::parse($absence->SDate)->day == Carbon::parse($item->Date)->day) {
+                    $absence->STime = Carbon::parse($absence->SDate)->format('H:i');
+                    if ($absence->STime < $time_in_am) {
+                        $absence->STime = Carbon::parse($time_in_am)->format('H:i');
+                    }
+                } else {
+                    $absence->STime = Carbon::parse($time_in_am)->format('H:i');
+                }
+                if (Carbon::parse($absence->EDate)->day == Carbon::parse($item->Date)->day) {
+                    $absence->ETime = Carbon::parse($absence->EDate)->format('H:i');
+                } else {
+                    $absence->ETime = Carbon::parse($time_out_pm)->format('H:i');
+                }
+            }
+            if (isset($item->id)) {
+                $time_in_am = isset($item->STimeOfDay) && $item->STimeOfDay != '' && $item->STimeOfDay !== '00:00:00'
+                    ? $item->STimeOfDay
+                    : $time_in_am;
+                $time_out_pm = isset($item->ETimeOfDay) && $item->ETimeOfDay != '' && $item->ETimeOfDay !== '00:00:00'
+                    ? $item->ETimeOfDay
+                    : $time_out_pm;
+
+                $time_s_break = isset($item->SBreakOfDay) && $item->SBreakOfDay != '' && $item->SBreakOfDay !== '00:00:00'
+                    ? $item->SBreakOfDay
+                    : $time_out_am;
+                $time_e_break = isset($item->EBreakOfDay) && $item->EBreakOfDay != '' && $item->EBreakOfDay !== '00:00:00'
+                    ? $item->EBreakOfDay
+                    : $time_in_pm;
+                $dayOfTheWeek = Carbon::parse($item->Date)->dayOfWeek;
+                $item->weekDay = $dayOfTheWeek;
+                $item->calendarEvent = CalendarEvent::query()
+                    ->where('Type', '=', 0)
+                    ->where('StartDate', '<=', Carbon::parse($item->Date)->toDateString())
+                    ->where('EndDate', '>=', Carbon::parse($item->Date)->toDateString())
+                    ->where('CalendarID', 1)
+                    ->first();
+
+                $check_event = in_array($dayOfTheWeek, [0, 6]) && $item->calendarEvent;
+
+                if ($item->TimeIn != null
+                    && Carbon::parse($item->TimeIn) > Carbon::parse($time_in_am)
+                    && ((!in_array($dayOfTheWeek, [0, 6])) || $check_event)) {
+                    $item->late = Carbon::parse($item->TimeIn)->diffInSeconds(Carbon::parse($time_in_am));
+                    $users->lateTimes += 1;
+                    $users->lateHours += round($item->late / 60, 2);
+                } else {
+                    $item->late = 0;
+                }
+                if ($item->TimeOut != null
+                    && Carbon::parse($item->TimeOut) < Carbon::parse($time_out_pm)
+                    && ((!in_array($dayOfTheWeek, [0, 6])) || $check_event)) {
+                    $item->soon = Carbon::parse($item->TimeOut)->diffInSeconds(Carbon::parse($time_out_pm));
+                    $users->soonTimes += 1;
+                    $users->soonHours += round($item->soon / 60, 2);
+                } else {
+                    $item->soon = 0;
+                }
+                if ($item->TimeOut != null
+                    && Carbon::parse($item->TimeOut) > Carbon::parse($time_out_pm)
+                    && ((!in_array($dayOfTheWeek, [0, 6])) || $check_event)) {
+                    $item->N = Carbon::parse($item->TimeOut)->diffInSeconds(Carbon::parse($time_out_pm));
+                    $users->overKeeping += round($item->N / 60, 2);
+                } else {
+                    $item->N = 0;
+                }
+                //thời gian làm việc
+                $floatWorkHours = isset($item->ETimeOfDay)
+                    ? $this->_convertToHours($this->_diffMin($time_in_am, $time_s_break) + $this->_diffMin($time_e_break, $time_out_pm))
+                    : $totalTimeWork;
+
+                if (!is_null($item->TimeIn)
+                    && !is_null($item->TimeOut)
+                    && ((!in_array($dayOfTheWeek, [0, 6])) || $check_event)) {
+
+                    //trường hợp vào ra ngoài thời gian làm việc
+                    if ($item->TimeOut < $time_in_am
+                        || $item->TimeIn > $time_out_pm
+                        || ($item->TimeIn > $time_s_break && $item->TimeOut < $time_e_break)) {
+                        $item->hours = 0;
+                        $item->hoursTT = 0;
+                    } elseif ($item->TimeIn <= $time_s_break && $item->TimeOut >= $time_e_break) {
+                        $a = $this->_diffMin($item->TimeIn < $time_in_am
+                            ? $time_in_am
+                            : $item->TimeIn,
+                            $item->TimeOut < $time_out_pm
+                                ? $item->TimeOut
+                                : $time_out_pm);
+                        $b = $this->_diffMin($time_e_break, $time_s_break);
+                        $item->hours = $this->_convertToHours($a) - $this->_convertToHours($b);
+//                        $item->hoursTT = $this->_convertToHours($this->_diffMin($item->TimeIn, $item->TimeOut));
+                        $item->hoursTT = $this->_diffSeconds($item->TimeIn, $item->TimeOut);
+                        $item->keeping = $item->hours / $floatWorkHours;
+                        $users->totalKeeping += $item->keeping;
+                    } else {
+                        $min1 = $item->TimeIn > $time_s_break
+                            ? ($item->TimeIn < $time_e_break ? $time_e_break : $item->TimeIn)
+                            : ($item->TimeIn < $time_in_am ? $time_in_am : $item->TimeIn);
+                        $min2 = $item->TimeOut < $time_e_break
+                            ? ($item->TimeOut > $time_s_break ? $time_s_break : $item->TimeOut)
+                            : ($item->TimeOut > $time_out_pm ? $time_out_pm : $item->TimeOut);
+                        $item->hours = $this->_convertToHours($this->_diffMin($min1, $min2));
+//                        $item->hoursTT = $this->_convertToHours($this->_diffMin($item->TimeIn, $item->TimeOut));
+                        $item->hoursTT = $this->_diffSeconds($item->TimeIn, $item->TimeOut);
+                        $item->keeping = $item->hours / $floatWorkHours;
+                        $users->totalKeeping += $item->keeping;
+                    }
+                }
+
+                $item->type = CheckinHistory::query()
+                    ->select("Type")
+                    ->distinct()
+                    ->where("UserID", $user->id)
+                    ->whereDate("CheckinTime", Carbon::create($item->Date)->format("Y-m-d"))
+                    ->get();
+                $item->IsInCpn == 1
+                    ? $users->checkinAtCompany += 1
+                    : $users->checkinAtHome += 1;
+            }
+        }
+        return $users;
+    }
+}

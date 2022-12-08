@@ -1,0 +1,13 @@
+{
+    "name": "TaskRequest",
+    "alias": "taskrequest",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\TaskRequest\\Providers\\TaskRequestServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

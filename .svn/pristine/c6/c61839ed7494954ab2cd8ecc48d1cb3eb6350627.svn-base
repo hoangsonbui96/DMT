@@ -1,0 +1,6 @@
+ #showUser1,#listLeader,#showUser2,#listMember {
+        display: block;
+        height: 150px;      
+        overflow-y: auto;    
+        overflow-x: hidden;  
+}
