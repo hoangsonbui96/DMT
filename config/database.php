@@ -46,8 +46,8 @@ return [
         'akb' => [
             'driver'         => 'mysql',
             'url'            => env('DATABASE_URL'),
-            'host'           => env('DB_HOST', '192.168.1.26'),
-            'port'           => env('DB_PORT', '3306'),
+            'host'           => env('DB_HOST', ''),
+            'port'           => env('DB_PORT', ''),
             'database'       => env('DB_DATABASE', 'akb_dmt'),
             'username'       => env('DB_USERNAME', 'root'),
             'password'       => env('DB_PASSWORD', 'akb1564ltt'),

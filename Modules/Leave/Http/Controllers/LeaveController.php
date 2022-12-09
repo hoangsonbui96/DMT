@@ -620,7 +620,7 @@ class LeaveController extends AdminController
         //Trường hợp đặc biệt : trường hợp xin nghỉ phép (ko full) chỉ một khoảng tgian trong ngày
         $absenceNotFull = $this->getAbsenceNotFullDate($userId);
         //dd($absenceNotFull[1]['Day']);
-        //dd($absenceNotFull);
+        dd($absenceNotFull);
 
         // echo 'ODatesCarbon'.$ODatesCarbon.'---'.'SearchDatesCarbon'.$SearchDatesCarbon.'---';
         // echo '<pre>';
@@ -674,16 +674,11 @@ class LeaveController extends AdminController
         //lấy ra hết ngày đã xin nghỉ phép
         $getTimeAbsence = $this->getTimeAbsence($userId);
         //dd($getTimeAbsence);
-        // $user = User::query()
-        //         ->select("STimeOfDay", "ETimeOfDay")
-        //         ->where("id", $userId)
-        //         ->get();
+        $user = User::query()
+                ->select("STimeOfDay", "ETimeOfDay")
+                ->where("id", $userId)
+                ->first();
 
-        //lấy ra giờ phải đi làm thực tế của user
-        // foreach($user as $item){
-        //     $userStartTime = $item->STimeOfDay;
-        //     $userEndTime = $item->ETimeOfDay;
-        // }
         $arrData = [];
         $getAbsenceNotFullDate = new stdClass();
         $getAbsenceNotFullDate->te = 5;
@@ -695,49 +690,50 @@ class LeaveController extends AdminController
 
             $startDateFormat = $startDate->format('Y-m-d');
 
-            //lấy ra ngày chấm công của ngày có xin nghỉ phép và giờ mặc định phải đi làm của hôm đó
-            $timeKeeping = TimekeepingNew::query()
-            ->select("Date", "TimeIn", "TimeOut", "STimeOfDay", "ETimeOfDay")
-            ->where("UserId", "=", $userId)
-            ->where("Date", "=", $startDateFormat)
-            //->where("Date", "=", "2022-11-10")
-            ->first();
+            //thời gian bắt đầu và kết thúc của xin nghỉ phép
+            $dayAbsenceOfStartTime = date('H:i:s', strtotime($startDate));
+            $dayAbsenceOfEndTime = date('H:i:s', strtotime($endDate));
+            //dd($dayAbsenceOfStartTime);
 
-            //dd($timeKeeping);
+            //check xem là nghỉ full hay nghỉ giữa ngày
+            if(!($dayAbsenceOfStartTime <= $user->STimeOfDay && $dayAbsenceOfEndTime >= $user->ETimeOfDay)){  
+                //lấy ra ngày chấm công của ngày có xin nghỉ phép và giờ mặc định phải đi làm của hôm đó
+                $timeKeeping = TimekeepingNew::query()
+                ->select("Date", "TimeIn", "TimeOut", "STimeOfDay", "ETimeOfDay")
+                ->where("UserId", "=", $userId)
+                ->where("Date", "=", $startDateFormat)
+                //->where("Date", "=", "2022-11-10")
+                ->first();
 
-            //check chỉ lấy những data # rỗng(là trường hợp có nghỉ phép và có cả tgian chấm công)
-            if($timeKeeping != null && $timeKeeping->TimeIn != null && $timeKeeping->TimeOut != null){
                 //dd($timeKeeping);
-                //array_push($arrs, $timeKeeping);
-                //ngày của ngày xin nghỉ phép
-                $dayOfStartDate = date('d', strtotime($startDate));
-                $dayOfEndDate = date('d', strtotime($endDate));
 
-                //thời gian bắt đầu và kết thúc của xin nghỉ phép
-                $dayAbsenceOfStartTime = date('H:i:s', strtotime($startDate));
-                $dayAbsenceOfEndTime = date('H:i:s', strtotime($endDate));
+                //check chỉ lấy những data # rỗng(là trường hợp có nghỉ phép và có cả tgian chấm công)
+                if($timeKeeping != null && $timeKeeping->TimeIn != null && $timeKeeping->TimeOut != null){
+                    //dd($timeKeeping);
+                    //array_push($arrs, $timeKeeping);
+                    //ngày của ngày xin nghỉ phép
+                    $dayOfStartDate = date('d', strtotime($startDate));
+                    $dayOfEndDate = date('d', strtotime($endDate));
 
-                //nếu thời gian bắt đầu xin nghỉ phép nhỏ hơn thời gian phải đi làm thì 
-                //thời gian bắt đầu xin nghỉ phép sẽ fix về thời gian phải đi làm
-                if($dayAbsenceOfStartTime < $timeKeeping->STimeOfDay){
-                    $dayAbsenceOfStartTime = $timeKeeping->STimeOfDay;
-                }
-                // và kết thúc của xin nghỉ phép mà lớn hơn thời gian phải check out thì
-                //thời gian kết thúc nghỉ phép sẽ fix về t/gian phải check out
-                if($dayAbsenceOfEndTime > $timeKeeping->ETimeOfDay){
-                    $dayAbsenceOfEndTime = $timeKeeping->ETimeOfDay;
-                }
+                    //nếu thời gian bắt đầu xin nghỉ phép nhỏ hơn thời gian phải đi làm thì 
+                    //thời gian bắt đầu xin nghỉ phép sẽ fix về thời gian phải đi làm
+                    if($dayAbsenceOfStartTime < $timeKeeping->STimeOfDay){
+                        $dayAbsenceOfStartTime = $timeKeeping->STimeOfDay;
+                    }
+                    // và kết thúc của xin nghỉ phép mà lớn hơn thời gian phải check out thì
+                    //thời gian kết thúc nghỉ phép sẽ fix về t/gian phải check out
+                    if($dayAbsenceOfEndTime > $timeKeeping->ETimeOfDay){
+                        $dayAbsenceOfEndTime = $timeKeeping->ETimeOfDay;
+                    }
 
-                //TH1 : ngày SDate = ngày EDate(chỉ nghỉ trong 1 ngày)
-                if($dayOfStartDate == $dayOfEndDate){
-                    $subArr['Day'] = $startDateFormat;
-                    //check tgian nghỉ phải trong khoảng tgian phải đi làm
-                    if($dayAbsenceOfStartTime >= $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime <= $timeKeeping->ETimeOfDay){
-                        //Chia tiếp ra 3 trường hợp
-                        //TH1 :nghỉ nửa trước(H bắt đầu xin nghỉ = H phải chấm công)
-                        if($dayAbsenceOfStartTime == $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime < $timeKeeping->ETimeOfDay){
-                            //check xem có đủ cả check in check out ko thiếu thì vào trg hợp ko chấm công
-                            if($timeKeeping->TimeOut != null && $timeKeeping->TimeIn != null){
+                    //TH1 : ngày SDate = ngày EDate(chỉ nghỉ trong 1 ngày)
+                    if($dayOfStartDate == $dayOfEndDate){
+                        $subArr['Day'] = $startDateFormat;
+                        //check tgian nghỉ phải trong khoảng tgian phải đi làm
+                        if($dayAbsenceOfStartTime >= $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime <= $timeKeeping->ETimeOfDay){
+                            //Chia tiếp ra 3 trường hợp
+                            //TH1 :nghỉ nửa trước(H bắt đầu xin nghỉ = H phải chấm công)
+                            if($dayAbsenceOfStartTime == $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime < $timeKeeping->ETimeOfDay){
                                 //check đi muộn về sớm
                                 //nếu h check in muộn hơn h kết thúc xin nghỉ thì là (đi muộn)
                                 if($timeKeeping->TimeIn > $dayAbsenceOfEndTime){
@@ -754,42 +750,36 @@ class LeaveController extends AdminController
                                     $subArr['soonTime'] = $soonTimes;
                                     //dd($soonTimes);
                                 }
-                                array_push($arrData , $subArr);
-                            }else{
-                                //check ko chấm công(1 trong 2 h check out check in ko có)
-                                if(($timeKeeping->TimeOut == null || $timeKeeping->TimeIn == null) || ($timeKeeping->TimeOut == null && $timeKeeping->TimeIn == null)){
-                                    //dd('thieu smth');
-                                }
+                                array_push($arrData , $subArr);                                
                             }
-                        }
-                        //TH2 : nghỉ giữa ngày
-                        else if($dayAbsenceOfStartTime > $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime < $timeKeeping->ETimeOfDay){
-                            //dd('smth');
-                        }   
-                        //TH3 : nghỉ nửa sau(H kết thúc xin nghỉ = H phải kết thúc chấm công)
-                        else if($dayAbsenceOfStartTime > $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime == $timeKeeping->ETimeOfDay){
-                            //dd('smth');
+                            //TH2 : nghỉ giữa ngày
+                            else if($dayAbsenceOfStartTime > $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime < $timeKeeping->ETimeOfDay){
+                                //dd('smth');
+                            }   
+                            //TH3 : nghỉ nửa sau(H kết thúc xin nghỉ = H phải kết thúc chấm công)
+                            else if($dayAbsenceOfStartTime > $timeKeeping->STimeOfDay && $dayAbsenceOfEndTime == $timeKeeping->ETimeOfDay){
+                                //dd('smth');
 
+                            }
+                            //TH4 : nghỉ full cả ngày(ko xử lý)
                         }
-                        //TH4 : nghỉ full cả ngày(ko xử lý)
+                    }
+                    //TH2 : ngày SDate # ngày EDate(tức nghỉ nhiều ngày)
+                    else{
+                        
                     }
                 }
-                //TH2 : ngày SDate # ngày EDate(tức nghỉ nhiều ngày)
+                //trường hợp đăng ký nghỉ 1 khoảng trong ngày nhưng ko có check in check out hoặc cả 2(là trường hợp ko chấm công)
                 else{
-                    
+
                 }
-
-
-
             }
-            //trường hợp đăng ký nghỉ 1 khoảng trong ngày nhưng ko có check in check out
+            // nghỉ full thì ko cần làm gì
             else{
-
+                dd('nghỉ full');
             }
-
-            
         }
-        dd($arrData);
+        //dd($arrData);
         return $arrData;
 
     }
