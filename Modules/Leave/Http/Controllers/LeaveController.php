@@ -746,10 +746,13 @@ class LeaveController extends AdminController
                                 if($timeKeeping->TimeOut < $timeKeeping->ETimeOfDay){
                                     $soonTime = gmdate( "H:i:s", strtotime($timeKeeping->ETimeOfDay) - strtotime($timeKeeping->TimeOut));
                                     //trừ thêm 1 tiếng h nghỉ trưa
+                                    
                                     $soonTimes = gmdate( "H:i:s", strtotime($soonTime) - strtotime("01:00:00"));
                                     $subArr['soonTime'] = $soonTimes;
                                     //dd($soonTimes);
                                 }
+                                $subArr['TimeIn'] = $timeKeeping->TimeIn;
+                                $subArr['TimeOut'] = $timeKeeping->TimeOut;
                                 array_push($arrData , $subArr);                                
                             }
                             //TH2 : nghỉ giữa ngày
